@@ -45,7 +45,7 @@ public interface LwM2mObjectEnabler {
 
     CreateResponse create(CreateRequest request);
 
-    ReadResponse read(ReadRequest request);
+    ReadResponse read(ReadRequest request, boolean internal);
 
     WriteResponse write(WriteRequest request);
 

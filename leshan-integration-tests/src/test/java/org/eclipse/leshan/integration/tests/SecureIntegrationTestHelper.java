@@ -35,19 +35,23 @@ import java.security.spec.ECPoint;
 import java.security.spec.ECPrivateKeySpec;
 import java.security.spec.ECPublicKeySpec;
 import java.security.spec.KeySpec;
-import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.io.Charsets;
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.californium.scandium.dtls.pskstore.StaticPskStore;
-import org.eclipse.leshan.client.californium.LeshanClient;
+import org.eclipse.leshan.client.californium.LeshanClientBuilder;
+import org.eclipse.leshan.client.object.Device;
+import org.eclipse.leshan.client.object.Security;
+import org.eclipse.leshan.client.object.Server;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
-import org.eclipse.leshan.client.resource.ObjectEnabler;
 import org.eclipse.leshan.client.resource.ObjectsInitializer;
+import org.eclipse.leshan.client.util.LwM2mId;
+import org.eclipse.leshan.core.request.BindingMode;
 import org.eclipse.leshan.server.californium.LeshanServerBuilder;
 import org.eclipse.leshan.server.impl.SecurityRegistryImpl;
 import org.eclipse.leshan.util.Hex;
@@ -73,12 +77,12 @@ public class SecureIntegrationTestHelper extends IntegrationTestHelper {
         // create client credentials
         try {
             // Get point values
-            byte[] publicX = Hex
-                    .decodeHex("89c048261979208666f2bfb188be1968fc9021c416ce12828c06f4e314c167b5".toCharArray());
-            byte[] publicY = Hex
-                    .decodeHex("cbf1eb7587f08e01688d9ada4be859137ca49f79394bad9179326b3090967b68".toCharArray());
-            byte[] privateS = Hex
-                    .decodeHex("e67b68d2aaeb6550f19d98cade3ad62b39532e02e6b422e1f7ea189dabaea5d2".toCharArray());
+            byte[] publicX = Hex.decodeHex("89c048261979208666f2bfb188be1968fc9021c416ce12828c06f4e314c167b5"
+                    .toCharArray());
+            byte[] publicY = Hex.decodeHex("cbf1eb7587f08e01688d9ada4be859137ca49f79394bad9179326b3090967b68"
+                    .toCharArray());
+            byte[] privateS = Hex.decodeHex("e67b68d2aaeb6550f19d98cade3ad62b39532e02e6b422e1f7ea189dabaea5d2"
+                    .toCharArray());
 
             // Get Elliptic Curve Parameter spec for secp256r1
             AlgorithmParameters algoParameters = AlgorithmParameters.getInstance("EC");
@@ -113,12 +117,12 @@ public class SecureIntegrationTestHelper extends IntegrationTestHelper {
         // create server credentials
         try {
             // Get point values
-            byte[] publicX = Hex
-                    .decodeHex("fcc28728c123b155be410fc1c0651da374fc6ebe7f96606e90d927d188894a73".toCharArray());
-            byte[] publicY = Hex
-                    .decodeHex("d2ffaa73957d76984633fc1cc54d0b763ca0559a9dff9706e9f4557dacc3f52a".toCharArray());
-            byte[] privateS = Hex
-                    .decodeHex("1dae121ba406802ef07c193c1ee4df91115aabd79c1ed7f4c0ef7ef6a5449400".toCharArray());
+            byte[] publicX = Hex.decodeHex("fcc28728c123b155be410fc1c0651da374fc6ebe7f96606e90d927d188894a73"
+                    .toCharArray());
+            byte[] publicY = Hex.decodeHex("d2ffaa73957d76984633fc1cc54d0b763ca0559a9dff9706e9f4557dacc3f52a"
+                    .toCharArray());
+            byte[] privateS = Hex.decodeHex("1dae121ba406802ef07c193c1ee4df91115aabd79c1ed7f4c0ef7ef6a5449400"
+                    .toCharArray());
 
             // Get Elliptic Curve Parameter spec for secp256r1
             AlgorithmParameters algoParameters = AlgorithmParameters.getInstance("EC");
@@ -151,86 +155,89 @@ public class SecureIntegrationTestHelper extends IntegrationTestHelper {
         }
     }
 
-    // TODO we need better API for secure client, maybe we need a builder like leshanServer.
     public void createPSKClient() {
         ObjectsInitializer initializer = new ObjectsInitializer();
-        List<ObjectEnabler> objects = initializer.create(2, 3);
+        initializer.setInstancesForObject(
+                LwM2mId.SECURITY_ID,
+                Security.psk("coaps://" + server.getSecureAddress().getHostString() + ":"
+                        + server.getSecureAddress().getPort(), 12345, pskIdentity.getBytes(Charsets.UTF_8), pskKey));
+        initializer.setInstancesForObject(LwM2mId.SERVER_ID, new Server(12345, 30, BindingMode.U, false));
+        initializer.setInstancesForObject(LwM2mId.DEVICE_ID, new Device("Eclipse Leshan", MODEL_NUMBER, "12345", "U"));
+        List<LwM2mObjectEnabler> objects = initializer.createMandatory();
+        objects.add(initializer.create(2));
 
         InetSocketAddress clientAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
         DtlsConnectorConfig.Builder config = new DtlsConnectorConfig.Builder(clientAddress);
+        // TODO we should read the config from the security object
         config.setPskStore(new StaticPskStore(pskIdentity, pskKey));
 
         CoapServer coapServer = new CoapServer();
         coapServer.addEndpoint(new CoapEndpoint(new DTLSConnector(config.build()), NetworkConfig.getStandard()));
 
-        client = new LeshanClient(clientAddress, server.getSecureAddress(), coapServer,
-                new ArrayList<LwM2mObjectEnabler>(objects));
+        LeshanClientBuilder builder = new LeshanClientBuilder();
+        builder.setEndpoint(ENDPOINT_IDENTIFIER);
+        builder.setLocalAddress(clientAddress.getHostString(), clientAddress.getPort());
+        builder.setObjects(objects);
+        builder.setlocalServer(coapServer);
+        client = builder.build();
     }
 
-    // TODO we need better API for secure client, maybe we need a builder like leshanServer.
     public void createRPKClient() {
         ObjectsInitializer initializer = new ObjectsInitializer();
-        List<ObjectEnabler> objects = initializer.create(2, 3);
+        initializer.setInstancesForObject(
+                LwM2mId.SECURITY_ID,
+                Security.rpk("coaps://" + server.getSecureAddress().getHostString() + ":"
+                        + server.getSecureAddress().getPort(), 12345, clientPublicKey.getEncoded(),
+                        clientPrivateKey.getEncoded(), serverPublicKey.getEncoded()));
+        initializer.setInstancesForObject(LwM2mId.SERVER_ID, new Server(12345, 30, BindingMode.U, false));
+        initializer.setInstancesForObject(LwM2mId.DEVICE_ID, new Device("Eclipse Leshan", MODEL_NUMBER, "12345", "U"));
+        List<LwM2mObjectEnabler> objects = initializer.createMandatory();
+        objects.add(initializer.create(2));
 
         InetSocketAddress clientAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
         DtlsConnectorConfig.Builder config = new DtlsConnectorConfig.Builder(clientAddress);
+        // TODO we should read the config from the security object
+        // TODO no way to provide a dynamic config with the current scandium API
         config.setIdentity(clientPrivateKey, clientPublicKey);
 
         CoapServer coapServer = new CoapServer();
         coapServer.addEndpoint(new CoapEndpoint(new DTLSConnector(config.build()), NetworkConfig.getStandard()));
-        client = new LeshanClient(clientAddress, server.getSecureAddress(), coapServer,
-                new ArrayList<LwM2mObjectEnabler>(objects));
+
+        LeshanClientBuilder builder = new LeshanClientBuilder();
+        builder.setEndpoint(ENDPOINT_IDENTIFIER);
+        builder.setLocalAddress(clientAddress.getHostString(), clientAddress.getPort());
+        builder.setObjects(objects);
+        builder.setlocalServer(coapServer);
+        client = builder.build();
     }
 
-    // TODO we need better API for secure client, maybe we need a builder like leshanServer.
     public void createX509CertClient(PrivateKey privatekey, Certificate[] trustedCertificates) {
         ObjectsInitializer initializer = new ObjectsInitializer();
-        List<ObjectEnabler> objects = initializer.create(2, 3);
+        // TODO security instance with certificate info
+        initializer.setInstancesForObject(
+                LwM2mId.SECURITY_ID,
+                Security.noSec("coaps://" + server.getSecureAddress().getHostString() + ":"
+                        + server.getSecureAddress().getPort(), 12345));
+        initializer.setInstancesForObject(LwM2mId.SERVER_ID, new Server(12345, 30, BindingMode.U, false));
+        initializer.setInstancesForObject(LwM2mId.DEVICE_ID, new Device("Eclipse Leshan", MODEL_NUMBER, "12345", "U"));
+        List<LwM2mObjectEnabler> objects = initializer.createMandatory();
+        objects.add(initializer.create(2));
 
         InetSocketAddress clientAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
         DtlsConnectorConfig.Builder config = new DtlsConnectorConfig.Builder(clientAddress);
+        // TODO we should read the config from the security object
         config.setIdentity(privatekey, clientX509CertChain, false);
         config.setTrustStore(trustedCertificates);
 
         CoapServer coapServer = new CoapServer();
         coapServer.addEndpoint(new CoapEndpoint(new DTLSConnector(config.build()), NetworkConfig.getStandard()));
-        client = new LeshanClient(clientAddress, server.getSecureAddress(), coapServer,
-                new ArrayList<LwM2mObjectEnabler>(objects));
-    }
 
-    public void createPSKandRPKClient() {
-        ObjectsInitializer initializer = new ObjectsInitializer();
-        List<ObjectEnabler> objects = initializer.create(2, 3);
-
-        InetSocketAddress clientAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
-        DtlsConnectorConfig.Builder config = new DtlsConnectorConfig.Builder(clientAddress);
-        config.setPskStore(new StaticPskStore(pskIdentity, pskKey));
-        config.setIdentity(clientPrivateKey, clientPublicKey);
-
-        CoapServer coapServer = new CoapServer();
-        coapServer.addEndpoint(new CoapEndpoint(new DTLSConnector(config.build()), NetworkConfig.getStandard()));
-
-        client = new LeshanClient(clientAddress, server.getSecureAddress(), coapServer,
-                new ArrayList<LwM2mObjectEnabler>(objects));
-    }
-
-    // TODO we need better API for secure client, maybe we need a builder like leshanServer.
-    public void createPSKandX509CertClient() {
-        ObjectsInitializer initializer = new ObjectsInitializer();
-        List<ObjectEnabler> objects = initializer.create(2, 3);
-
-        InetSocketAddress clientAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
-        DtlsConnectorConfig.Builder config = new DtlsConnectorConfig.Builder(clientAddress);
-        // Configure PSK
-        config.setPskStore(new StaticPskStore(pskIdentity, pskKey));
-        // Configure X509 Certificate
-        config.setIdentity(clientPrivateKeyFromCert, clientX509CertChain, false);
-        config.setTrustStore(trustedCertificates);
-
-        CoapServer coapServer = new CoapServer();
-        coapServer.addEndpoint(new CoapEndpoint(new DTLSConnector(config.build()), NetworkConfig.getStandard()));
-        client = new LeshanClient(clientAddress, server.getSecureAddress(), coapServer,
-                new ArrayList<LwM2mObjectEnabler>(objects));
+        LeshanClientBuilder builder = new LeshanClientBuilder();
+        builder.setEndpoint(ENDPOINT_IDENTIFIER);
+        builder.setLocalAddress(clientAddress.getHostString(), clientAddress.getPort());
+        builder.setObjects(objects);
+        builder.setlocalServer(coapServer);
+        client = builder.build();
     }
 
     public void createServerWithRPK() {

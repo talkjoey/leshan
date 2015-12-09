@@ -17,16 +17,14 @@
 package org.eclipse.leshan.integration.tests;
 
 import static org.eclipse.leshan.integration.tests.IntegrationTestHelper.ENDPOINT_IDENTIFIER;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.eclipse.californium.core.CoapServer;
 import org.eclipse.leshan.LinkObject;
 import org.eclipse.leshan.ResponseCode;
 import org.eclipse.leshan.client.californium.LeshanClient;
@@ -62,7 +60,6 @@ public class RegistrationTest {
         helper.server.stop();
     }
 
-    // TODO we must fix the API of registered response
     @Test
     public void registered_device_exists() {
         // check there are no client registered
@@ -75,14 +72,10 @@ public class RegistrationTest {
         assertEquals(ResponseCode.CREATED, response.getCode());
         assertEquals(1, helper.server.getClientRegistry().allClients().size());
         Client client = helper.server.getClientRegistry().get(ENDPOINT_IDENTIFIER);
-        // TODO we must fix the API of registered response
-        // assertEquals(response.getRegistrationID(), client.getRegistrationId());
-        assertArrayEquals(LinkObject.parse("</>;rt=\"oma.lwm2m\",</2>,</3/0>".getBytes()), client.getObjectLinks());
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void fail_to_create_client_with_null() {
-        helper.client = new LeshanClient(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), null);
+        assertEquals(response.getRegistrationID(), "/rd/" + client.getRegistrationId());
+        // TODO </0/0> should not be part of the object links
+        assertArrayEquals(LinkObject.parse("</>;rt=\"oma.lwm2m\",</0/0>,</1/0>,</2>,</3/0>".getBytes()),
+                client.getObjectLinks());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -92,7 +85,8 @@ public class RegistrationTest {
         ArrayList<LwM2mObjectEnabler> objects = new ArrayList<>();
         objects.add(objectEnabler);
         objects.add(objectEnabler2);
-        helper.client = new LeshanClient(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), objects);
+        helper.client = new LeshanClient("test", new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), objects,
+                new CoapServer());
     }
 
     @Test
@@ -109,9 +103,10 @@ public class RegistrationTest {
         assertEquals(ResponseCode.CREATED, response.getCode());
         assertEquals(1, helper.server.getClientRegistry().allClients().size());
         Client client = helper.server.getClientRegistry().get(ENDPOINT_IDENTIFIER);
-        // TODO we must fix the API of registered response
-        // assertEquals(response.getRegistrationID(), client.getRegistrationId());
-        assertArrayEquals(LinkObject.parse("</>;rt=\"oma.lwm2m\",</2>,</3/0>".getBytes()), client.getObjectLinks());
+        assertEquals(response.getRegistrationID(), "/rd/" + client.getRegistrationId());
+        // TODO </0/0> should not be part of the object links
+        assertArrayEquals(LinkObject.parse("</>;rt=\"oma.lwm2m\",</0/0>,</1/0>,</2>,</3/0>".getBytes()),
+                client.getObjectLinks());
     }
 
     @Test(expected = RuntimeException.class)

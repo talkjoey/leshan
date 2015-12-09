@@ -100,14 +100,14 @@ public class ObjectEnabler extends BaseObjectEnabler {
     }
 
     @Override
-    protected ReadResponse doRead(ReadRequest request) {
+    protected ReadResponse doRead(ReadRequest request, boolean internal) {
         LwM2mPath path = request.getPath();
 
         // Manage Object case
         if (path.isObject()) {
             List<LwM2mObjectInstance> lwM2mObjectInstances = new ArrayList<>();
             for (Entry<Integer, LwM2mInstanceEnabler> entry : instances.entrySet()) {
-                lwM2mObjectInstances.add(getLwM2mObjectInstance(entry.getKey(), entry.getValue()));
+                lwM2mObjectInstances.add(getLwM2mObjectInstance(entry.getKey(), entry.getValue(), internal));
             }
             return ReadResponse.success(new LwM2mObject(getId(), lwM2mObjectInstances));
         }
@@ -118,17 +118,17 @@ public class ObjectEnabler extends BaseObjectEnabler {
             return ReadResponse.notFound();
 
         if (path.getResourceId() == null) {
-            return ReadResponse.success(getLwM2mObjectInstance(path.getObjectInstanceId(), instance));
+            return ReadResponse.success(getLwM2mObjectInstance(path.getObjectInstanceId(), instance, internal));
         }
 
         // Manage Resource case
         return instance.read(path.getResourceId());
     }
 
-    LwM2mObjectInstance getLwM2mObjectInstance(int instanceid, LwM2mInstanceEnabler instance) {
+    LwM2mObjectInstance getLwM2mObjectInstance(int instanceid, LwM2mInstanceEnabler instance, boolean internal) {
         List<LwM2mResource> resources = new ArrayList<>();
         for (ResourceModel resourceModel : getObjectModel().resources.values()) {
-            if (resourceModel.operations.isReadable()) {
+            if (internal || resourceModel.operations.isReadable()) {
                 ReadResponse response = instance.read(resourceModel.id);
                 if (response.getCode() == ResponseCode.CONTENT && response.getContent() instanceof LwM2mResource)
                     resources.add((LwM2mResource) response.getContent());

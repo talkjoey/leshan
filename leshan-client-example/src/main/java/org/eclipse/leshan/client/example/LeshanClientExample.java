@@ -20,7 +20,6 @@ package org.eclipse.leshan.client.example;
 
 import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -33,19 +32,19 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 
-import org.eclipse.leshan.ResponseCode;
+import org.eclipse.californium.core.CoapServer;
 import org.eclipse.leshan.client.californium.LeshanClient;
+import org.eclipse.leshan.client.object.Security;
+import org.eclipse.leshan.client.object.Server;
 import org.eclipse.leshan.client.resource.BaseInstanceEnabler;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
-import org.eclipse.leshan.client.resource.ObjectEnabler;
 import org.eclipse.leshan.client.resource.ObjectsInitializer;
+import org.eclipse.leshan.client.util.LwM2mId;
 import org.eclipse.leshan.core.model.ResourceModel.Type;
 import org.eclipse.leshan.core.node.LwM2mResource;
-import org.eclipse.leshan.core.request.DeregisterRequest;
-import org.eclipse.leshan.core.request.RegisterRequest;
+import org.eclipse.leshan.core.request.BindingMode;
 import org.eclipse.leshan.core.response.ExecuteResponse;
 import org.eclipse.leshan.core.response.ReadResponse;
-import org.eclipse.leshan.core.response.RegisterResponse;
 import org.eclipse.leshan.core.response.WriteResponse;
 
 /*
@@ -55,7 +54,7 @@ import org.eclipse.leshan.core.response.WriteResponse;
  * java -jar target/leshan-client-*-SNAPSHOT-jar-with-dependencies.jar 127.0.0.1 5683
  */
 public class LeshanClientExample {
-    private String registrationID;
+
     private final Location locationInstance = new Location();
 
     public static void main(final String[] args) {
@@ -75,53 +74,23 @@ public class LeshanClientExample {
 
         // Initialize object list
         ObjectsInitializer initializer = new ObjectsInitializer();
-
-        initializer.setClassForObject(3, Device.class);
+        initializer.setInstancesForObject(LwM2mId.SECURITY_ID,
+                Security.noSec("coap://" + serverHostName + ":" + serverPort, 123));
+        initializer.setInstancesForObject(LwM2mId.SERVER_ID, new Server(123, 30, BindingMode.U, false));
+        initializer.setClassForObject(3, MyDevice.class);
         initializer.setInstancesForObject(6, locationInstance);
-        List<ObjectEnabler> enablers = initializer.createMandatory();
+        List<LwM2mObjectEnabler> enablers = initializer.createMandatory();
         enablers.add(initializer.create(6));
 
         // Create client
+        final String endpointIdentifier = UUID.randomUUID().toString();
         final InetSocketAddress clientAddress = new InetSocketAddress(localHostName, localPort);
-        final InetSocketAddress serverAddress = new InetSocketAddress(serverHostName, serverPort);
 
-        final LeshanClient client = new LeshanClient(clientAddress, serverAddress, new ArrayList<LwM2mObjectEnabler>(
-                enablers));
+        final LeshanClient client = new LeshanClient(endpointIdentifier, clientAddress, enablers, new CoapServer());
 
         // Start the client
         client.start();
-
-        // Register to the server
-        final String endpointIdentifier = UUID.randomUUID().toString();
-        RegisterResponse response = client.send(new RegisterRequest(endpointIdentifier));
-        if (response == null) {
-            System.out.println("Registration request timeout");
-            return;
-        }
-
-        System.out.println("Device Registration (Success? " + response.getCode() + ")");
-        if (response.getCode() != ResponseCode.CREATED) {
-            // TODO Should we have a error message on response ?
-            // System.err.println("\tDevice Registration Error: " + response.getErrorMessage());
-            System.err
-                    .println("If you're having issues connecting to the LWM2M endpoint, try using the DTLS port instead");
-            return;
-        }
-
-        registrationID = response.getRegistrationID();
-        System.out.println("\tDevice: Registered Client Location '" + registrationID + "'");
-
-        // Deregister on shutdown and stop client.
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                if (registrationID != null) {
-                    System.out.println("\tDevice: Deregistering Client '" + registrationID + "'");
-                    client.send(new DeregisterRequest(registrationID), 1000);
-                    client.stop();
-                }
-            }
-        });
+        client.register();
 
         // Change the location through the Console
         Scanner scanner = new Scanner(System.in);
@@ -133,9 +102,9 @@ public class LeshanClientExample {
         scanner.close();
     }
 
-    public static class Device extends BaseInstanceEnabler {
+    public static class MyDevice extends BaseInstanceEnabler {
 
-        public Device() {
+        public MyDevice() {
             // notify new date each 5 second
             Timer timer = new Timer();
             timer.schedule(new TimerTask() {

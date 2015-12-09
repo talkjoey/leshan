@@ -16,12 +16,9 @@
 
 package org.eclipse.leshan.integration.tests;
 
-import static org.eclipse.leshan.ResponseCode.CONTENT;
-import static org.eclipse.leshan.ResponseCode.METHOD_NOT_ALLOWED;
-import static org.eclipse.leshan.ResponseCode.NOT_FOUND;
+import static org.eclipse.leshan.ResponseCode.*;
 import static org.eclipse.leshan.integration.tests.IntegrationTestHelper.ENDPOINT_IDENTIFIER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import org.eclipse.leshan.core.node.LwM2mObject;
 import org.eclipse.leshan.core.node.LwM2mObjectInstance;
@@ -118,7 +115,7 @@ public class ReadTest {
 
         LwM2mResource resource = (LwM2mResource) response.getContent();
         assertEquals(1, resource.getId());
-        assertEquals("Model Number", resource.getValue());
+        assertEquals(IntegrationTestHelper.MODEL_NUMBER, resource.getValue());
     }
 
     @Test

@@ -124,7 +124,7 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
         }
         // Manage Read Request
         else {
-            ReadResponse response = nodeEnabler.read(new ReadRequest(URI));
+            ReadResponse response = nodeEnabler.read(new ReadRequest(URI), false);
             if (response.getCode() == org.eclipse.leshan.ResponseCode.CONTENT) {
                 LwM2mPath path = new LwM2mPath(URI);
                 LwM2mNode content = response.getContent();

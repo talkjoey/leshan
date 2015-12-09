@@ -76,23 +76,23 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final ReadResponse read(ReadRequest request) {
+    public final ReadResponse read(ReadRequest request, boolean internal) {
         LwM2mPath path = request.getPath();
 
         // check if the resource is readable
         if (path.isResource()) {
             ResourceModel resourceModel = objectModel.resources.get(path.getResourceId());
-            if (resourceModel != null && !resourceModel.operations.isReadable()) {
+            if (resourceModel != null && !internal && !resourceModel.operations.isReadable()) {
                 return ReadResponse.methodNotAllowed();
             }
         }
 
-        return doRead(request);
+        return doRead(request, internal);
 
         // TODO we could do a validation of response.getContent by comparing with the spec.
     }
 
-    protected ReadResponse doRead(ReadRequest request) {
+    protected ReadResponse doRead(ReadRequest request, boolean internal) {
         // This should be a not implemented error, but this is not defined in the spec.
         return ReadResponse.internalServerError("not implemented");
     }
@@ -201,7 +201,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
 
     @Override
     public ObserveResponse observe(ObserveRequest request) {
-        ReadResponse readResponse = this.read(new ReadRequest(request.getPath().toString()));
+        ReadResponse readResponse = this.read(new ReadRequest(request.getPath().toString()), false);
         return new ObserveResponse(readResponse.getCode(), readResponse.getContent(), null,
                 readResponse.getErrorMessage());
     }
