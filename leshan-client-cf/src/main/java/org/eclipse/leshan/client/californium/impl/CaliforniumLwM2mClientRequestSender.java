@@ -39,18 +39,15 @@ public class CaliforniumLwM2mClientRequestSender implements LwM2mClientRequestSe
     private static final Logger LOG = LoggerFactory.getLogger(CaliforniumLwM2mClientRequestSender.class);
 
     private final Endpoint clientEndpoint;
-    private final InetSocketAddress serverAddress;
     private final LwM2mClient client;
 
-    public CaliforniumLwM2mClientRequestSender(final Endpoint endpoint, final InetSocketAddress serverAddress,
-            final LwM2mClient client) {
+    public CaliforniumLwM2mClientRequestSender(final Endpoint endpoint, final LwM2mClient client) {
         this.clientEndpoint = endpoint;
-        this.serverAddress = serverAddress;
         this.client = client;
     }
 
     @Override
-    public <T extends LwM2mResponse> T send(final UplinkRequest<T> request, Long timeout) {
+    public <T extends LwM2mResponse> T send(final InetSocketAddress serverAddress, final UplinkRequest<T> request, Long timeout) {
         // Create the CoAP request from LwM2m request
         final CoapClientRequestBuilder coapClientRequestBuilder = new CoapClientRequestBuilder(serverAddress, client);
         request.accept(coapClientRequestBuilder);
@@ -82,7 +79,7 @@ public class CaliforniumLwM2mClientRequestSender implements LwM2mClientRequestSe
     }
 
     @Override
-    public <T extends LwM2mResponse> void send(final UplinkRequest<T> request,
+    public <T extends LwM2mResponse> void send(final InetSocketAddress serverAddress, final UplinkRequest<T> request,
             final ResponseCallback<T> responseCallback, final ErrorCallback errorCallback) {
         // Create the CoAP request from LwM2m request
         final CoapClientRequestBuilder coapClientRequestBuilder = new CoapClientRequestBuilder(serverAddress, client);

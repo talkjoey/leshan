@@ -15,11 +15,7 @@
  *******************************************************************************/
 package org.eclipse.leshan.client.californium;
 
-import static org.eclipse.leshan.client.util.LwM2mId.*;
-
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,12 +34,10 @@ import org.eclipse.leshan.client.LwM2mClient;
 import org.eclipse.leshan.client.californium.impl.CaliforniumLwM2mClientRequestSender;
 import org.eclipse.leshan.client.californium.impl.ObjectResource;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
-import org.eclipse.leshan.client.util.LwM2mId;
-import org.eclipse.leshan.core.node.LwM2mObject;
-import org.eclipse.leshan.core.node.LwM2mObjectInstance;
-import org.eclipse.leshan.core.request.BindingMode;
+import org.eclipse.leshan.client.servers.DmServerInfo;
+import org.eclipse.leshan.client.servers.ServersInfo;
+import org.eclipse.leshan.client.servers.ServersInfoExtractor;
 import org.eclipse.leshan.core.request.DeregisterRequest;
-import org.eclipse.leshan.core.request.ReadRequest;
 import org.eclipse.leshan.core.request.RegisterRequest;
 import org.eclipse.leshan.core.request.UpdateRequest;
 import org.eclipse.leshan.core.request.UplinkRequest;
@@ -70,7 +64,7 @@ public class LeshanClient implements LwM2mClient {
     private final AtomicBoolean clientServerStarted = new AtomicBoolean(false);
     private final CaliforniumLwM2mClientRequestSender requestSender;
 
-    private RegisterInfo registerInfo;
+    private ServersInfo serversInfo;
 
     public LeshanClient(final String endpoint, final InetSocketAddress clientAddress,
             final List<LwM2mObjectEnabler> objectEnablers, final CoapServer serverLocal) {
@@ -82,11 +76,12 @@ public class LeshanClient implements LwM2mClient {
 
         this.endpoint = endpoint;
 
+        // Create CoAP endpoint
         final Endpoint coapEndpoint = new CoapEndpoint(clientAddress);
         serverLocal.addEndpoint(coapEndpoint);
-
         clientSideServer = serverLocal;
 
+        // Create CoAP resources for each lwm2m Objects.
         this.objectEnablers = new HashMap<>();
         for (LwM2mObjectEnabler enabler : objectEnablers) {
             if (clientSideServer.getRoot().getChild(Integer.toString(enabler.getId())) != null) {
@@ -99,15 +94,15 @@ public class LeshanClient implements LwM2mClient {
             clientSideServer.add(clientObject);
         }
 
-        // extract DM info from server/security objects
-        registerInfo = this.getRegisterInfo();
-        if (registerInfo == null) {
+        // Extract DM info from server/security objects
+        serversInfo = ServersInfoExtractor.getInfo(this.objectEnablers);
+        if (serversInfo == null || serversInfo.deviceMangements.isEmpty()) {
             throw new IllegalArgumentException("Could not extract registration info from objects");
         }
-        LOG.debug("Registration info: {}", registerInfo);
+        LOG.debug("Registration info: {}", serversInfo);
 
-        requestSender = new CaliforniumLwM2mClientRequestSender(serverLocal.getEndpoint(clientAddress),
-                new InetSocketAddress(registerInfo.serverUri.getHost(), registerInfo.serverUri.getPort()), this);
+        // Create sender
+        requestSender = new CaliforniumLwM2mClientRequestSender(serverLocal.getEndpoint(clientAddress), this);
     }
 
     @Override
@@ -117,22 +112,23 @@ public class LeshanClient implements LwM2mClient {
     }
 
     public boolean register() {
+        DmServerInfo dmInfo = serversInfo.deviceMangements.get(0);
 
-        if (registerInfo == null) {
+        if (dmInfo == null) {
             LOG.error("Missing info to register to a DM server");
             return false;
         }
 
-        RegisterResponse response = this.send(new RegisterRequest(endpoint, registerInfo.lifetime, null,
-                registerInfo.binding, null, null));
+        RegisterResponse response = this.send(new RegisterRequest(endpoint, dmInfo.lifetime, null, dmInfo.binding,
+                null, null));
 
         if (response.getCode() == ResponseCode.CREATED) {
             LOG.info("Registered with location '{}'", response.getRegistrationID());
             registrationID = response.getRegistrationID();
 
             // update every lifetime period
-            regUpdateFuture = schedExecutor.scheduleAtFixedRate(new UpdateRegistration(), registerInfo.lifetime,
-                    registerInfo.lifetime, TimeUnit.SECONDS);
+            regUpdateFuture = schedExecutor.scheduleAtFixedRate(new UpdateRegistration(), dmInfo.lifetime,
+                    dmInfo.lifetime, TimeUnit.SECONDS);
         } else {
             LOG.error("Registration failed: {}", response.getCode());
         }
@@ -200,7 +196,10 @@ public class LeshanClient implements LwM2mClient {
         if (!clientServerStarted.get()) {
             throw new RuntimeException("Internal CoapServer is not started.");
         }
-        return requestSender.send(request, null);
+
+        DmServerInfo dmInfo = serversInfo.deviceMangements.get(0);
+        InetSocketAddress serverAddress = new InetSocketAddress(dmInfo.serverUri.getHost(), dmInfo.serverUri.getPort());
+        return requestSender.send(serverAddress, request, null);
     }
 
     @Override
@@ -208,7 +207,9 @@ public class LeshanClient implements LwM2mClient {
         if (!clientServerStarted.get()) {
             throw new RuntimeException("Internal CoapServer is not started.");
         }
-        return requestSender.send(request, timeout);
+        DmServerInfo dmInfo = serversInfo.deviceMangements.get(0);
+        InetSocketAddress serverAddress = new InetSocketAddress(dmInfo.serverUri.getHost(), dmInfo.serverUri.getPort());
+        return requestSender.send(serverAddress, request, timeout);
     }
 
     @Override
@@ -217,65 +218,13 @@ public class LeshanClient implements LwM2mClient {
         if (!clientServerStarted.get()) {
             throw new RuntimeException("Internal CoapServer is not started.");
         }
-        requestSender.send(request, responseCallback, errorCallback);
+        DmServerInfo dmInfo = serversInfo.deviceMangements.get(0);
+        InetSocketAddress serverAddress = new InetSocketAddress(dmInfo.serverUri.getHost(), dmInfo.serverUri.getPort());
+        requestSender.send(serverAddress, request, responseCallback, errorCallback);
     }
 
     @Override
     public List<LwM2mObjectEnabler> getObjectEnablers() {
         return new ArrayList<>(objectEnablers.values());
     }
-
-    private static class RegisterInfo {
-        private URI serverUri;
-        private long lifetime;
-        private BindingMode binding;
-
-        // TODO sms number
-
-        @Override
-        public String toString() {
-            return String.format("serverUri=%s, lifetime=%s, binding=%s", serverUri, lifetime, binding);
-        }
-    }
-
-    private RegisterInfo getRegisterInfo() {
-
-        LwM2mObjectEnabler securityEnabler = this.objectEnablers.get(SECURITY_ID);
-        LwM2mObjectEnabler serverEnabler = this.objectEnablers.get(SERVER_ID);
-
-        if (securityEnabler != null && serverEnabler != null) {
-
-            if (serverEnabler.getAvailableInstanceIds().size() > 1) {
-                throw new IllegalStateException("Only one DM server supported for now");
-            }
-
-            LwM2mObjectInstance serverInstance = (LwM2mObjectInstance) serverEnabler.read(
-                    new ReadRequest(SERVER_ID, serverEnabler.getAvailableInstanceIds().get(0)), true).getContent();
-
-            LwM2mObject secObject = (LwM2mObject) securityEnabler.read(new ReadRequest(SECURITY_ID), true).getContent();
-
-            // find security info for the DM server (identified by its short server ID)
-            for (LwM2mObjectInstance secInstance : secObject.getInstances().values()) {
-
-                // is it the DM server?
-                if (secInstance.getResource(SEC_SERVER_ID).getValue()
-                        .equals(serverInstance.getResource(SRV_SERVER_ID).getValue()) //
-                        && (Boolean) secInstance.getResource(LwM2mId.SEC_BOOTSTRAP).getValue() == false) {
-                    RegisterInfo info = new RegisterInfo();
-                    try {
-                        info.serverUri = new URI((String) secInstance.getResource(SEC_SERVER_URI).getValue());
-                        info.lifetime = (long) serverInstance.getResource(SRV_LIFETIME).getValue();
-                        // TODO check supported binding (from resource /3/0/16)
-                        info.binding = BindingMode.valueOf((String) serverInstance.getResource(SRV_BINDING).getValue());
-                        return info;
-                    } catch (URISyntaxException e) {
-                        LOG.error("Invalid DM server URI", e);
-                        return null;
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
 }
