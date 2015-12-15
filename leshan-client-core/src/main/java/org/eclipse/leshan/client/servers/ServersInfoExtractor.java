@@ -55,26 +55,27 @@ public class ServersInfoExtractor {
                 if ((boolean) security.getResource(SEC_BOOTSTRAP).getValue()) {
                     // create bootstrap info
                     ServerInfo info = new ServerInfo();
+                    info.serverId = (long) security.getResource(SEC_SERVER_ID).getValue();
                     info.serverUri = new URI((String) security.getResource(SEC_SERVER_URI).getValue());
 
-                    infos.bootstraps.add(info);
+                    infos.bootstraps.put(info.serverId, info);
                 } else {
                     // create device management info
                     DmServerInfo info = new DmServerInfo();
                     info.serverUri = new URI((String) security.getResource(SEC_SERVER_URI).getValue());
-                    long serverId = (long) security.getResource(SEC_SERVER_ID).getValue();
+                    info.serverId = (long) security.getResource(SEC_SERVER_ID).getValue();
 
                     // search corresponding device management server
                     for (LwM2mObjectInstance server : servers.getInstances().values()) {
-                        if (serverId == (Long) server.getResource(SRV_SERVER_ID).getValue()) {
+                        if (info.serverId == (Long) server.getResource(SRV_SERVER_ID).getValue()) {
                             info.lifetime = (long) server.getResource(SRV_LIFETIME).getValue();
-                            // TODO check supported binding (from resource /3/0/16)
                             info.binding = BindingMode.valueOf((String) server.getResource(SRV_BINDING).getValue());
+
+                            infos.deviceMangements.put(info.serverId, info);
                             break;
                         }
                     }
 
-                    infos.deviceMangements.add(info);
                 }
             } catch (URISyntaxException e) {
                 LOG.error(String.format("Invalid URI %s", (String) security.getResource(SEC_SERVER_URI).getValue()), e);

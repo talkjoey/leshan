@@ -15,12 +15,12 @@
  *******************************************************************************/
 package org.eclipse.leshan.client.servers;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ServersInfo {
-    public List<ServerInfo> bootstraps = new ArrayList<>();
-    public List<DmServerInfo> deviceMangements = new ArrayList<>();
+    public Map<Long, ServerInfo> bootstraps = new HashMap<>();
+    public Map<Long, DmServerInfo> deviceMangements = new HashMap<>();
 
     @Override
     public String toString() {

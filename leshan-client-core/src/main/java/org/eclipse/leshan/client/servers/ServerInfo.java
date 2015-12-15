@@ -19,6 +19,7 @@ import java.net.URI;
 
 public class ServerInfo {
 
+    public long serverId;
     public URI serverUri;
 
     @Override
