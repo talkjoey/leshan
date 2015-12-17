@@ -19,11 +19,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ServersInfo {
-    public Map<Long, ServerInfo> bootstraps = new HashMap<>();
+
+    public ServerInfo bootstrap;
+
+    // <shortServerId, Info>
     public Map<Long, DmServerInfo> deviceMangements = new HashMap<>();
 
     @Override
     public String toString() {
-        return String.format("Servers [bs=%s, dm=%s]", bootstraps, deviceMangements);
+        return String.format("ServersInfo [bootstrap=%s, deviceMangements=%s]", bootstrap, deviceMangements);
     }
+
 }

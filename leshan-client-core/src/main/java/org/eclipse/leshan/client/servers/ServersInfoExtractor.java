@@ -15,14 +15,7 @@
  *******************************************************************************/
 package org.eclipse.leshan.client.servers;
 
-import static org.eclipse.leshan.client.util.LwM2mId.SECURITY_ID;
-import static org.eclipse.leshan.client.util.LwM2mId.SEC_BOOTSTRAP;
-import static org.eclipse.leshan.client.util.LwM2mId.SEC_SERVER_ID;
-import static org.eclipse.leshan.client.util.LwM2mId.SEC_SERVER_URI;
-import static org.eclipse.leshan.client.util.LwM2mId.SERVER_ID;
-import static org.eclipse.leshan.client.util.LwM2mId.SRV_BINDING;
-import static org.eclipse.leshan.client.util.LwM2mId.SRV_LIFETIME;
-import static org.eclipse.leshan.client.util.LwM2mId.SRV_SERVER_ID;
+import static org.eclipse.leshan.client.util.LwM2mId.*;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -58,7 +51,7 @@ public class ServersInfoExtractor {
                     info.serverId = (long) security.getResource(SEC_SERVER_ID).getValue();
                     info.serverUri = new URI((String) security.getResource(SEC_SERVER_URI).getValue());
 
-                    infos.bootstraps.put(info.serverId, info);
+                    infos.bootstrap = info;
                 } else {
                     // create device management info
                     DmServerInfo info = new DmServerInfo();

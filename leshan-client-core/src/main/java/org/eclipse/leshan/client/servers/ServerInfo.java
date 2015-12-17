@@ -15,12 +15,17 @@
  *******************************************************************************/
 package org.eclipse.leshan.client.servers;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 
 public class ServerInfo {
 
     public long serverId;
     public URI serverUri;
+
+    public InetSocketAddress getAddress() {
+        return new InetSocketAddress(serverUri.getHost(), serverUri.getPort());
+    }
 
     @Override
     public String toString() {

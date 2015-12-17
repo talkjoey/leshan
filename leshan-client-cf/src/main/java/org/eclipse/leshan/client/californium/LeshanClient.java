@@ -26,8 +26,10 @@ import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.leshan.client.LwM2mClient;
+import org.eclipse.leshan.client.californium.impl.BootstrapResource;
 import org.eclipse.leshan.client.californium.impl.CaliforniumLwM2mClientRequestSender;
 import org.eclipse.leshan.client.californium.impl.ObjectResource;
+import org.eclipse.leshan.client.californium.impl.RootResource;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
 import org.eclipse.leshan.client.servers.DmServerInfo;
 import org.eclipse.leshan.client.servers.RegistrationEngine;
@@ -87,6 +89,10 @@ public class LeshanClient implements LwM2mClient {
 
         // Create registration engine
         engine = new RegistrationEngine(endpoint, this.objectEnablers, requestSender);
+
+        // Create CoAP resources needed for the bootstrap sequence
+        clientSideServer.add(new RootResource(objectEnablers, engine));
+        clientSideServer.add(new BootstrapResource(engine));
 
         // De-register on shutdown and stop client.
         Runtime.getRuntime().addShutdownHook(new Thread() {

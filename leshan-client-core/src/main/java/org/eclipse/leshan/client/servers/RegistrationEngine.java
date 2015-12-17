@@ -15,19 +15,22 @@
  *******************************************************************************/
 package org.eclipse.leshan.client.servers;
 
-import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.leshan.ResponseCode;
 import org.eclipse.leshan.client.request.LwM2mClientRequestSender;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
+import org.eclipse.leshan.core.request.BootstrapRequest;
 import org.eclipse.leshan.core.request.DeregisterRequest;
 import org.eclipse.leshan.core.request.RegisterRequest;
 import org.eclipse.leshan.core.request.UpdateRequest;
+import org.eclipse.leshan.core.response.BootstrapResponse;
 import org.eclipse.leshan.core.response.DeregisterResponse;
 import org.eclipse.leshan.core.response.RegisterResponse;
 import org.eclipse.leshan.core.response.UpdateResponse;
@@ -69,10 +72,62 @@ public class RegistrationEngine {
         });
     }
 
+    private AtomicBoolean bootstrapping = new AtomicBoolean(false);
+    private CountDownLatch bootstrappingLatch = new CountDownLatch(1);
+
+    /**
+     * Notifies the engine that the bootstrap sequence is finished
+     */
+    public void bootstrapFinished() {
+        bootstrappingLatch.countDown();
+    }
+
+    /**
+     * @return <code>true</code> if the client is currently bootstrapping
+     */
+    public boolean bootstrapping() {
+        return bootstrapping.get();
+    }
+
     private void bootstrap() {
-        // TODO implement bootstrap
-        LOG.info("Start Bootstrap session");
-        System.out.println("Start Bootstrap session : not yet implemented");
+
+        if (serversInfo.bootstrap == null) {
+            LOG.error("Missing info to boostrap the client");
+            return;
+        }
+
+        if (bootstrapping.compareAndSet(false, true)) {
+            try {
+                LOG.info("Starting bootstrap session");
+
+                // send bootstrap request
+                BootstrapResponse response = sender.send(serversInfo.bootstrap.getAddress(), new BootstrapRequest(
+                        endpoint), null);
+                if (response == null) {
+                    LOG.error("Bootstrap failed: timeout");
+                } else if (response.getCode() == ResponseCode.CHANGED) {
+
+                    // wait until it is finished (or too late)
+                    bootstrappingLatch = new CountDownLatch(1);
+
+                    boolean timeout = bootstrappingLatch.await(10, TimeUnit.SECONDS);
+                    if (timeout) {
+                        LOG.error("Bootstrap sequence timeout");
+                    } else {
+                        LOG.info("Bootstrap finished");
+                    }
+
+                } else {
+                    LOG.error("Bootstrap failed: {}", response.getCode());
+                }
+            } catch (InterruptedException e) {
+                LOG.error("Error while waiting for bootstrap finish", e);
+            } finally {
+                bootstrapping.set(false);
+            }
+        } else {
+            LOG.info("Bootstrap sequence already started");
+        }
     }
 
     public boolean register() {
@@ -84,12 +139,11 @@ public class RegistrationEngine {
         }
 
         // send register request
-        InetSocketAddress serverAddress = new InetSocketAddress(dmInfo.serverUri.getHost(), dmInfo.serverUri.getPort());
-        RegisterResponse response = sender.send(serverAddress, new RegisterRequest(endpoint, dmInfo.lifetime, null,
-                dmInfo.binding, null, null), null);
+        RegisterResponse response = sender.send(dmInfo.getAddress(), new RegisterRequest(endpoint, dmInfo.lifetime,
+                null, dmInfo.binding, null, null), null);
         if (response == null) {
             registrationID = null;
-            LOG.info("Registration failed: timeout");
+            LOG.error("Registration failed: timeout");
         } else if (response.getCode() == ResponseCode.CREATED) {
             registrationID = response.getRegistrationID();
 
@@ -116,8 +170,7 @@ public class RegistrationEngine {
         }
 
         // Send deregister request
-        InetSocketAddress serverAddress = new InetSocketAddress(dmInfo.serverUri.getHost(), dmInfo.serverUri.getPort());
-        DeregisterResponse response = sender.send(serverAddress, new DeregisterRequest(registrationID), null);
+        DeregisterResponse response = sender.send(dmInfo.getAddress(), new DeregisterRequest(registrationID), null);
         if (response == null) {
             registrationID = null;
             LOG.info("Deregistration failed: timeout");
@@ -143,9 +196,8 @@ public class RegistrationEngine {
         }
 
         // Send update
-        InetSocketAddress serverAddress = new InetSocketAddress(dmInfo.serverUri.getHost(), dmInfo.serverUri.getPort());
-        final UpdateResponse response = sender.send(serverAddress, new UpdateRequest(registrationID, null, null, null,
-                null), null);
+        final UpdateResponse response = sender.send(dmInfo.getAddress(), new UpdateRequest(registrationID, null, null,
+                null, null), null);
         if (response == null) {
             // we can contact device management so we must start a new bootstrap session
             registrationID = null;
