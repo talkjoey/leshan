@@ -18,16 +18,30 @@ package org.eclipse.leshan.core.response;
 import org.eclipse.leshan.ResponseCode;
 
 /**
- * The response to a client bootstrap request.
+ * Response to a delete request from the bootstrap server.
  */
-public class BootstrapResponse extends AbstractLwM2mResponse {
+public class BootstrapDeleteResponse extends AbstractLwM2mResponse {
 
-    public BootstrapResponse(final ResponseCode code, final String errorMessage) {
+    public BootstrapDeleteResponse(ResponseCode code, String errorMessage) {
         super(code, errorMessage);
     }
 
     @Override
-    public boolean isSuccess() {
-        return getCode() == ResponseCode.CHANGED;
+    public String toString() {
+        if (errorMessage != null)
+            return String.format("BootstrapDeleteResponse [code=%s, errormessage=%s]", code, errorMessage);
+        else
+            return String.format("BootstrapDeleteResponse [code=%s]", code);
     }
+
+    // Syntactic sugar static constructors :
+
+    public static DeleteResponse success() {
+        return new DeleteResponse(ResponseCode.DELETED, null);
+    }
+
+    public static DeleteResponse methodNotAllowed() {
+        return new DeleteResponse(ResponseCode.METHOD_NOT_ALLOWED, null);
+    }
+
 }

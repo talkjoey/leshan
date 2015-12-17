@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013-2015 Sierra Wireless and others.
+ * Copyright (c) 2015 Sierra Wireless and others.
  * 
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -15,29 +15,21 @@
  *******************************************************************************/
 package org.eclipse.leshan.core.request;
 
-/**
- * A visitor to visit a Downlink Lightweight M2M request.
- */
-public interface DownlinkRequestVisitor {
-    void visit(ReadRequest request);
+import org.eclipse.leshan.core.node.LwM2mPath;
+import org.eclipse.leshan.core.response.BootstrapFinishResponse;
 
-    void visit(DiscoverRequest request);
+public class BootstrapFinishRequest implements DownlinkRequest<BootstrapFinishResponse> {
 
-    void visit(WriteRequest request);
+    @Override
+    public LwM2mPath getPath() {
+        // not targeting a node.
+        return null;
+    }
 
-    void visit(WriteAttributesRequest request);
+    @Override
+    public void accept(DownlinkRequestVisitor visitor) {
+        // TODO Auto-generated method stub
 
-    void visit(ExecuteRequest request);
+    }
 
-    void visit(CreateRequest request);
-
-    void visit(DeleteRequest request);
-
-    void visit(ObserveRequest request);
-
-    void visit(BootstrapWriteRequest request);
-
-    void visit(BootstrapDeleteRequest request);
-
-    void visit(BootstrapFinishRequest request);
 }

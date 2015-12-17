@@ -18,16 +18,30 @@ package org.eclipse.leshan.core.response;
 import org.eclipse.leshan.ResponseCode;
 
 /**
- * The response to a client bootstrap request.
+ * Response to a write request from the bootstrap server.
  */
-public class BootstrapResponse extends AbstractLwM2mResponse {
+public class BootstrapWriteResponse extends AbstractLwM2mResponse {
 
-    public BootstrapResponse(final ResponseCode code, final String errorMessage) {
+    public BootstrapWriteResponse(ResponseCode code, String errorMessage) {
         super(code, errorMessage);
     }
 
     @Override
-    public boolean isSuccess() {
-        return getCode() == ResponseCode.CHANGED;
+    public String toString() {
+        if (errorMessage != null)
+            return String.format("BootstrapWriteResponse [code=%s, errormessage=%s]", code, errorMessage);
+        else
+            return String.format("BootstrapWriteResponse [code=%s]", code);
     }
+
+    // Syntactic sugar static constructors :
+
+    public static BootstrapWriteResponse success() {
+        return new BootstrapWriteResponse(ResponseCode.CHANGED, null);
+    }
+
+    public static BootstrapWriteResponse badRequest(String errorMessage) {
+        return new BootstrapWriteResponse(ResponseCode.BAD_REQUEST, errorMessage);
+    }
+
 }

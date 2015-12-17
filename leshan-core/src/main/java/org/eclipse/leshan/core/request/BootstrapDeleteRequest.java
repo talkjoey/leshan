@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013-2015 Sierra Wireless and others.
+ * Copyright (c) 2015 Sierra Wireless and others.
  * 
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
@@ -15,29 +15,24 @@
  *******************************************************************************/
 package org.eclipse.leshan.core.request;
 
+import org.eclipse.leshan.core.node.LwM2mPath;
+import org.eclipse.leshan.core.response.BootstrapDeleteResponse;
+
 /**
- * A visitor to visit a Downlink Lightweight M2M request.
+ * A LWM2M request for deleting object instances during the bootstrap phase.
  */
-public interface DownlinkRequestVisitor {
-    void visit(ReadRequest request);
+public class BootstrapDeleteRequest implements DownlinkRequest<BootstrapDeleteResponse> {
 
-    void visit(DiscoverRequest request);
+    @Override
+    public LwM2mPath getPath() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 
-    void visit(WriteRequest request);
+    @Override
+    public void accept(DownlinkRequestVisitor visitor) {
+        // TODO Auto-generated method stub
 
-    void visit(WriteAttributesRequest request);
+    }
 
-    void visit(ExecuteRequest request);
-
-    void visit(CreateRequest request);
-
-    void visit(DeleteRequest request);
-
-    void visit(ObserveRequest request);
-
-    void visit(BootstrapWriteRequest request);
-
-    void visit(BootstrapDeleteRequest request);
-
-    void visit(BootstrapFinishRequest request);
 }
