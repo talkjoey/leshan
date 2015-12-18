@@ -27,6 +27,11 @@ public class BootstrapWriteResponse extends AbstractLwM2mResponse {
     }
 
     @Override
+    public boolean isSuccess() {
+        return getCode() == ResponseCode.CHANGED;
+    }
+
+    @Override
     public String toString() {
         if (errorMessage != null)
             return String.format("BootstrapWriteResponse [code=%s, errormessage=%s]", code, errorMessage);

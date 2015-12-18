@@ -27,6 +27,11 @@ public class BootstrapDeleteResponse extends AbstractLwM2mResponse {
     }
 
     @Override
+    public boolean isSuccess() {
+        return getCode() == ResponseCode.DELETED;
+    }
+
+    @Override
     public String toString() {
         if (errorMessage != null)
             return String.format("BootstrapDeleteResponse [code=%s, errormessage=%s]", code, errorMessage);
@@ -43,5 +48,4 @@ public class BootstrapDeleteResponse extends AbstractLwM2mResponse {
     public static DeleteResponse methodNotAllowed() {
         return new DeleteResponse(ResponseCode.METHOD_NOT_ALLOWED, null);
     }
-
 }
