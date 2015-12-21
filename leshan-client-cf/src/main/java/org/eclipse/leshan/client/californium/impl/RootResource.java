@@ -15,14 +15,14 @@
  *******************************************************************************/
 package org.eclipse.leshan.client.californium.impl;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
 
 import org.eclipse.californium.core.CoapResource;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
 import org.eclipse.leshan.client.servers.RegistrationEngine;
+import org.eclipse.leshan.core.request.DeleteRequest;
 import org.eclipse.leshan.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,18 +34,24 @@ public class RootResource extends CoapResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(RootResource.class);
 
-    private final List<LwM2mObjectEnabler> enablers;
-    private final RegistrationEngine regEngine;
+    private Map<Integer, LwM2mObjectEnabler> enablers;
+    private RegistrationEngine regEngine;
 
-    public RootResource(final List<LwM2mObjectEnabler> objectEnablers, RegistrationEngine regEngine) {
+    public RootResource() {
         super("", false);
-        this.enablers = new ArrayList<>(objectEnablers);
+    }
+
+    public void setEnablers(Map<Integer, LwM2mObjectEnabler> objectEnablers) {
+        this.enablers = objectEnablers;
+    }
+
+    public void setRegEngine(RegistrationEngine regEngine) {
         this.regEngine = regEngine;
     }
 
     @Override
     public void handleDELETE(CoapExchange exchange) {
-        if (StringUtils.isEmpty(exchange.getRequestOptions().getUriPathString())) {
+        if (!StringUtils.isEmpty(exchange.getRequestOptions().getUriPathString())) {
             exchange.respond(ResponseCode.METHOD_NOT_ALLOWED);
             return;
         }
@@ -55,11 +61,12 @@ public class RootResource extends CoapResource {
         // TODO from the bootstrap server?
 
         if (regEngine.bootstrapping()) {
-
-            for (LwM2mObjectEnabler enabler : enablers) {
-                // TODO delete
+            // TODO do not delete boostrap server (see 5.2.5.2 Bootstrap Delete)
+            for (LwM2mObjectEnabler enabler : enablers.values()) {
+                for (Integer instanceId : enabler.getAvailableInstanceIds()) {
+                    enabler.delete(new DeleteRequest(enabler.getId(), instanceId));
+                }
             }
-
         } else {
             LOG.warn("Bootstrap delete outside a bootstrap session");
         }

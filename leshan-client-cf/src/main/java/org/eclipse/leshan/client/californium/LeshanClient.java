@@ -71,8 +71,14 @@ public class LeshanClient implements LwM2mClient {
         serverLocal.addEndpoint(coapEndpoint);
         clientSideServer = serverLocal;
 
-        // Create CoAP resources for each lwm2m Objects.
+        // Create sender
+        requestSender = new CaliforniumLwM2mClientRequestSender(serverLocal.getEndpoint(clientAddress), this);
+
+        // Create registration engine
         this.objectEnablers = new HashMap<>();
+        engine = new RegistrationEngine(endpoint, this.objectEnablers, requestSender);
+
+        // Create CoAP resources for each lwm2m Objects.
         for (LwM2mObjectEnabler enabler : objectEnablers) {
             if (clientSideServer.getRoot().getChild(Integer.toString(enabler.getId())) != null) {
                 throw new IllegalArgumentException("Trying to load Client Object of name '" + enabler.getId()
@@ -84,14 +90,14 @@ public class LeshanClient implements LwM2mClient {
             clientSideServer.add(clientObject);
         }
 
-        // Create sender
-        requestSender = new CaliforniumLwM2mClientRequestSender(serverLocal.getEndpoint(clientAddress), this);
-
-        // Create registration engine
-        engine = new RegistrationEngine(endpoint, this.objectEnablers, requestSender);
-
         // Create CoAP resources needed for the bootstrap sequence
-        clientSideServer.add(new RootResource(objectEnablers, engine));
+        if (clientSideServer.getRoot() instanceof RootResource) {
+            RootResource root = (RootResource) clientSideServer.getRoot();
+            root.setEnablers(this.objectEnablers);
+            root.setRegEngine(engine);
+        } else {
+            LOG.warn("The CoAP server has no leshan Root Resource, so it'is possible it can not handle BootstrapDelete request");
+        }
         clientSideServer.add(new BootstrapResource(engine));
 
         // De-register on shutdown and stop client.

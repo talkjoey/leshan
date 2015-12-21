@@ -19,6 +19,7 @@ import java.net.InetSocketAddress;
 import java.util.List;
 
 import org.eclipse.californium.core.CoapServer;
+import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.leshan.client.object.Device;
 import org.eclipse.leshan.client.object.Security;
 import org.eclipse.leshan.client.object.Server;
@@ -75,7 +76,12 @@ public class LeshanClientBuilder {
             localAddress = new InetSocketAddress(0);
         }
         if (localServer == null) {
-            localServer = new CoapServer();
+            localServer = new CoapServer() {
+                @Override
+                protected Resource createRoot() {
+                    return new org.eclipse.leshan.client.californium.impl.RootResource();
+                }
+            };
         }
         if (objectEnablers == null) {
             ObjectsInitializer initializer = new ObjectsInitializer();
