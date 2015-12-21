@@ -18,7 +18,6 @@
 
 package org.eclipse.leshan.client.example;
 
-import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -32,8 +31,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 
-import org.eclipse.californium.core.CoapServer;
 import org.eclipse.leshan.client.californium.LeshanClient;
+import org.eclipse.leshan.client.californium.LeshanClientBuilder;
 import org.eclipse.leshan.client.object.Security;
 import org.eclipse.leshan.client.object.Server;
 import org.eclipse.leshan.client.resource.BaseInstanceEnabler;
@@ -83,10 +82,11 @@ public class LeshanClientExample {
         enablers.add(initializer.create(6));
 
         // Create client
-        final String endpointIdentifier = UUID.randomUUID().toString();
-        final InetSocketAddress clientAddress = new InetSocketAddress(localHostName, localPort);
-
-        final LeshanClient client = new LeshanClient(endpointIdentifier, clientAddress, enablers, new CoapServer());
+        LeshanClientBuilder builder = new LeshanClientBuilder();
+        builder.setEndpoint(UUID.randomUUID().toString());
+        builder.setLocalAddress(localHostName, localPort);
+        builder.setObjects(enablers);
+        final LeshanClient client = builder.build();
 
         // Start the client
         client.start();
