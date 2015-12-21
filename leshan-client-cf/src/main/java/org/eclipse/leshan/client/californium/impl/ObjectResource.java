@@ -181,6 +181,7 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
 
                 return;
             } catch (InvalidValueException e) {
+                LOG.warn("Unable to decode payload to write", e);
                 coapExchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
                 return;
             }
@@ -239,6 +240,7 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
                 return;
             }
         } catch (InvalidValueException e) {
+        	LOG.warn("Unable to decode payload to create", e);
             exchange.respond(ResponseCode.BAD_REQUEST);
             return;
         }
