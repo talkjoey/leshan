@@ -49,6 +49,13 @@ public class Security extends BaseInstanceEnabler {
     }
 
     /**
+     * Returns a new security instance (NoSec) for a boostrap server.
+     */
+    public static Security noSecBootstap(String serverUri, int shortServerId) {
+        return new Security(serverUri, true, 3, new byte[0], new byte[0], new byte[0], shortServerId);
+    }
+
+    /**
      * Returns a new security instance (NoSec) for a device management server.
      */
     public static Security noSec(String serverUri, int shortServerId) {
