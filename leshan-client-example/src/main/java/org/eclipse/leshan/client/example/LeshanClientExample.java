@@ -18,6 +18,8 @@
 
 package org.eclipse.leshan.client.example;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -29,7 +31,6 @@ import java.util.Scanner;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
 
 import org.eclipse.leshan.client.californium.LeshanClient;
 import org.eclipse.leshan.client.californium.LeshanClientBuilder;
@@ -70,7 +71,13 @@ public class LeshanClientExample {
 
     public LeshanClientExample(final String localHostName, final int localPort, final String serverHostName,
             final int serverPort) {
-
+        // Get Endpoint Name
+        String endpoint;
+        try {
+            endpoint = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            endpoint = "LeshanClientExample";
+        }
         // Initialize object list
         ObjectsInitializer initializer = new ObjectsInitializer();
         initializer.setInstancesForObject(LwM2mId.SECURITY_ID,
@@ -83,7 +90,7 @@ public class LeshanClientExample {
 
         // Create client
         LeshanClientBuilder builder = new LeshanClientBuilder();
-        builder.setEndpoint(UUID.randomUUID().toString());
+        builder.setEndpoint(endpoint);
         builder.setLocalAddress(localHostName, localPort);
         builder.setObjects(enablers);
         final LeshanClient client = builder.build();
