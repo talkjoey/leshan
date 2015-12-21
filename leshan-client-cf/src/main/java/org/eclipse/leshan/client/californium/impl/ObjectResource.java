@@ -34,6 +34,7 @@ import org.eclipse.leshan.ObserveSpec;
 import org.eclipse.leshan.client.resource.LinkFormattable;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
 import org.eclipse.leshan.client.resource.NotifySender;
+import org.eclipse.leshan.client.servers.RegistrationEngine;
 import org.eclipse.leshan.client.util.ObserveSpecParser;
 import org.eclipse.leshan.core.model.LwM2mModel;
 import org.eclipse.leshan.core.node.LwM2mNode;
@@ -44,6 +45,7 @@ import org.eclipse.leshan.core.node.LwM2mResource;
 import org.eclipse.leshan.core.node.codec.InvalidValueException;
 import org.eclipse.leshan.core.node.codec.LwM2mNodeDecoder;
 import org.eclipse.leshan.core.node.codec.LwM2mNodeEncoder;
+import org.eclipse.leshan.core.request.BootstrapWriteRequest;
 import org.eclipse.leshan.core.request.ContentFormat;
 import org.eclipse.leshan.core.request.ContentFormatHelper;
 import org.eclipse.leshan.core.request.CreateRequest;
@@ -55,6 +57,7 @@ import org.eclipse.leshan.core.request.ReadRequest;
 import org.eclipse.leshan.core.request.WriteAttributesRequest;
 import org.eclipse.leshan.core.request.WriteRequest;
 import org.eclipse.leshan.core.request.WriteRequest.Mode;
+import org.eclipse.leshan.core.response.BootstrapWriteResponse;
 import org.eclipse.leshan.core.response.CreateResponse;
 import org.eclipse.leshan.core.response.DeleteResponse;
 import org.eclipse.leshan.core.response.DiscoverResponse;
@@ -74,12 +77,14 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
 
     private static final Logger LOG = LoggerFactory.getLogger(ObjectResource.class);
 
-    private LwM2mObjectEnabler nodeEnabler;
+    private final LwM2mObjectEnabler nodeEnabler;
+    private final RegistrationEngine registrationEngine;
 
-    public ObjectResource(LwM2mObjectEnabler nodeEnabler) {
+    public ObjectResource(LwM2mObjectEnabler nodeEnabler, RegistrationEngine registrationEngine) {
         super(Integer.toString(nodeEnabler.getId()));
         this.nodeEnabler = nodeEnabler;
         this.nodeEnabler.setNotifySender(this);
+        this.registrationEngine = registrationEngine;
         setObservable(true);
     }
 
@@ -156,7 +161,7 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
             coapExchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
             return;
         }
-        // Manage Write Request (replace)
+        // Manage Write and Bootstrap Write Request (replace) and
         else {
             LwM2mPath path = new LwM2mPath(URI);
             ContentFormat contentFormat = ContentFormat.fromCode(coapExchange.getRequestOptions().getContentFormat());
@@ -164,9 +169,16 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
             try {
                 LwM2mModel model = new LwM2mModel(nodeEnabler.getObjectModel());
                 lwM2mNode = LwM2mNodeDecoder.decode(coapExchange.getRequestPayload(), contentFormat, path, model);
-                WriteResponse response = nodeEnabler
-                        .write(new WriteRequest(Mode.REPLACE, contentFormat, URI, lwM2mNode));
-                coapExchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
+                if (registrationEngine.bootstrapping()) {
+                    BootstrapWriteResponse response = nodeEnabler.write(new BootstrapWriteRequest(path, lwM2mNode,
+                            contentFormat));
+                    coapExchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
+                } else {
+                    WriteResponse response = nodeEnabler.write(new WriteRequest(Mode.REPLACE, contentFormat, URI,
+                            lwM2mNode));
+                    coapExchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
+                }
+
                 return;
             } catch (InvalidValueException e) {
                 coapExchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);

@@ -86,7 +86,7 @@ public class LeshanClient implements LwM2mClient {
             }
             this.objectEnablers.put(enabler.getId(), enabler);
 
-            final ObjectResource clientObject = new ObjectResource(enabler);
+            final ObjectResource clientObject = new ObjectResource(enabler, engine);
             clientSideServer.add(clientObject);
         }
 

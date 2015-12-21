@@ -20,6 +20,7 @@ import org.eclipse.leshan.client.util.LinkFormatHelper;
 import org.eclipse.leshan.core.model.ObjectModel;
 import org.eclipse.leshan.core.model.ResourceModel;
 import org.eclipse.leshan.core.node.LwM2mPath;
+import org.eclipse.leshan.core.request.BootstrapWriteRequest;
 import org.eclipse.leshan.core.request.CreateRequest;
 import org.eclipse.leshan.core.request.DeleteRequest;
 import org.eclipse.leshan.core.request.DiscoverRequest;
@@ -28,6 +29,7 @@ import org.eclipse.leshan.core.request.ObserveRequest;
 import org.eclipse.leshan.core.request.ReadRequest;
 import org.eclipse.leshan.core.request.WriteAttributesRequest;
 import org.eclipse.leshan.core.request.WriteRequest;
+import org.eclipse.leshan.core.response.BootstrapWriteResponse;
 import org.eclipse.leshan.core.response.CreateResponse;
 import org.eclipse.leshan.core.response.DeleteResponse;
 import org.eclipse.leshan.core.response.DiscoverResponse;
@@ -117,6 +119,28 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     protected WriteResponse doWrite(WriteRequest request) {
         // This should be a not implemented error, but this is not defined in the spec.
         return WriteResponse.internalServerError("not implemented");
+    }
+
+    @Override
+    public final BootstrapWriteResponse write(BootstrapWriteRequest request) {
+        LwM2mPath path = request.getPath();
+
+        // check if the resource is writable
+        if (path.isResource()) {
+            ResourceModel resourceModel = objectModel.resources.get(path.getResourceId());
+            if (resourceModel != null && !resourceModel.operations.isWritable()) {
+                return BootstrapWriteResponse.badRequest(null);
+            }
+        }
+
+        // TODO we could do a validation of request.getNode() by comparing with resourceSpec information
+
+        return doWrite(request);
+    }
+
+    protected BootstrapWriteResponse doWrite(BootstrapWriteRequest request) {
+        // This should be a not implemented error, but this is not defined in the spec.
+        return BootstrapWriteResponse.internalServerError("not implemented");
     }
 
     @Override
