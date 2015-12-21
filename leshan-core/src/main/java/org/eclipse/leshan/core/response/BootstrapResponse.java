@@ -30,4 +30,26 @@ public class BootstrapResponse extends AbstractLwM2mResponse {
     public boolean isSuccess() {
         return getCode() == ResponseCode.CHANGED;
     }
+
+    @Override
+    public String toString() {
+        if (errorMessage != null)
+            return String.format("BootstrapResponse [code=%s, errormessage=%s]", code, errorMessage);
+        else
+            return String.format("BootstrapResponse [code=%s]", code);
+    }
+
+    // Syntactic sugar static constructors :
+
+    public static BootstrapResponse success() {
+        return new BootstrapResponse(ResponseCode.CHANGED, null);
+    }
+
+    public static BootstrapResponse badRequest(String errorMessage) {
+        return new BootstrapResponse(ResponseCode.BAD_REQUEST, errorMessage);
+    }
+
+    public static BootstrapResponse internalServerError(String errorMessage) {
+        return new BootstrapResponse(ResponseCode.INTERNAL_SERVER_ERROR, errorMessage);
+    }
 }

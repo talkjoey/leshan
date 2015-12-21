@@ -49,4 +49,8 @@ public class BootstrapWriteResponse extends AbstractLwM2mResponse {
         return new BootstrapWriteResponse(ResponseCode.BAD_REQUEST, errorMessage);
     }
 
+    public static BootstrapWriteResponse internalServerError(String errorMessage) {
+        return new BootstrapWriteResponse(ResponseCode.INTERNAL_SERVER_ERROR, errorMessage);
+    }
+
 }
