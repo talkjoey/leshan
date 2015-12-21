@@ -41,8 +41,8 @@ public class RegistrationEngine {
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationEngine.class);
 
     private String endpoint;
-    private ServersInfo serversInfo;
     private LwM2mClientRequestSender sender;
+    private final Map<Integer, LwM2mObjectEnabler> objectEnablers;
 
     // registration update
     private String registrationID;
@@ -52,7 +52,8 @@ public class RegistrationEngine {
     public RegistrationEngine(String endpoint, Map<Integer, LwM2mObjectEnabler> objectEnablers,
             LwM2mClientRequestSender requestSender) {
         this.endpoint = endpoint;
-        serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
+        this.objectEnablers = objectEnablers;
+
         sender = requestSender;
     }
 
@@ -60,6 +61,7 @@ public class RegistrationEngine {
         schedExecutor.submit(new Runnable() {
             @Override
             public void run() {
+                ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
                 if (!serversInfo.deviceMangements.isEmpty()) {
                     boolean success = register();
                     if (!success) {
@@ -90,6 +92,7 @@ public class RegistrationEngine {
     }
 
     private void bootstrap() {
+        ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
 
         if (serversInfo.bootstrap == null) {
             LOG.error("Missing info to boostrap the client");
@@ -98,7 +101,7 @@ public class RegistrationEngine {
 
         if (bootstrapping.compareAndSet(false, true)) {
             try {
-                LOG.info("Starting bootstrap session");
+                LOG.info("Starting bootstrap session " + bootstrapping.get());
 
                 // send bootstrap request
                 BootstrapResponse response = sender.send(serversInfo.bootstrap.getAddress(), new BootstrapRequest(
@@ -106,17 +109,17 @@ public class RegistrationEngine {
                 if (response == null) {
                     LOG.error("Bootstrap failed: timeout");
                 } else if (response.getCode() == ResponseCode.CHANGED) {
-
+                    LOG.info("Bootstrap started");
                     // wait until it is finished (or too late)
                     bootstrappingLatch = new CountDownLatch(1);
-
-                    boolean timeout = bootstrappingLatch.await(10, TimeUnit.SECONDS);
+                    boolean timeout = !bootstrappingLatch.await(10, TimeUnit.SECONDS);
                     if (timeout) {
                         LOG.error("Bootstrap sequence timeout");
                     } else {
-                        LOG.info("Bootstrap finished");
+                        serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
+                        LOG.info("Bootstrap finished {}", serversInfo);
+                        register();
                     }
-
                 } else {
                     LOG.error("Bootstrap failed: {}", response.getCode());
                 }
@@ -131,6 +134,7 @@ public class RegistrationEngine {
     }
 
     public boolean register() {
+        ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
         DmServerInfo dmInfo = serversInfo.deviceMangements.values().iterator().next();
 
         if (dmInfo == null) {
@@ -163,6 +167,7 @@ public class RegistrationEngine {
         if (registrationID == null)
             return true;
 
+        ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
         DmServerInfo dmInfo = serversInfo.deviceMangements.values().iterator().next();
         if (dmInfo == null) {
             LOG.error("Missing info to deregister to a DM server");
@@ -189,6 +194,7 @@ public class RegistrationEngine {
     public void update() {
         cancelUpdateTask();
 
+        ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
         DmServerInfo dmInfo = serversInfo.deviceMangements.values().iterator().next();
         if (dmInfo == null) {
             LOG.error("Missing info to update registration to a DM server");
