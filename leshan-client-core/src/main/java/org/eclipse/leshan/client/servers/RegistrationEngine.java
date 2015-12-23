@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RegistrationEngine {
+
     private static final Logger LOG = LoggerFactory.getLogger(RegistrationEngine.class);
 
     private String endpoint;
@@ -104,7 +105,7 @@ public class RegistrationEngine {
         }
 
         return serversInfo.bootstrap.getAddress().getAddress() != null
-                && serversInfo.bootstrap.getAddress().getAddress() == identity.getPeerAddress().getAddress();
+                && serversInfo.bootstrap.getAddress().getAddress().equals(identity.getPeerAddress().getAddress());
     }
 
     private void bootstrap() {

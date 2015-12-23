@@ -17,15 +17,20 @@ package org.eclipse.leshan.client.object;
 
 import org.eclipse.leshan.client.resource.BaseInstanceEnabler;
 import org.eclipse.leshan.client.resource.LwM2mInstanceEnabler;
+import org.eclipse.leshan.core.model.ResourceModel.Type;
 import org.eclipse.leshan.core.node.LwM2mResource;
 import org.eclipse.leshan.core.response.ExecuteResponse;
 import org.eclipse.leshan.core.response.ReadResponse;
 import org.eclipse.leshan.core.response.WriteResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple {@link LwM2mInstanceEnabler} for the Security (0) object.
  */
 public class Security extends BaseInstanceEnabler {
+
+    private static final Logger LOG = LoggerFactory.getLogger(Security.class);
 
     private String serverUri; /* coaps://host:port */
     private boolean bootstrapServer;
@@ -79,10 +84,45 @@ public class Security extends BaseInstanceEnabler {
     }
 
     @Override
-    public WriteResponse write(int resourceid, LwM2mResource value) {
+    public WriteResponse write(int resourceId, LwM2mResource value) {
+        LOG.debug("Write on resource {}: {}", resourceId, value);
+
         // restricted to BS server?
 
-        return super.write(resourceid, value);
+        switch (resourceId) {
+
+        case 0: // server uri
+            if (value.getType() != Type.STRING) {
+                return WriteResponse.badRequest("invalid type");
+            }
+            serverUri = (String) value.getValue();
+            return WriteResponse.success();
+
+        case 1: // is bootstrap server
+            if (value.getType() != Type.BOOLEAN) {
+                return WriteResponse.badRequest("invalid type");
+            }
+            bootstrapServer = (Boolean) value.getValue();
+            return WriteResponse.success();
+
+        case 2: // security mode
+            if (value.getType() != Type.INTEGER) {
+                return WriteResponse.badRequest("invalid type");
+            }
+            securityMode = ((Long) value.getValue()).intValue();
+            return WriteResponse.success();
+
+        case 10: // short server id
+            if (value.getType() != Type.INTEGER) {
+                return WriteResponse.badRequest("invalid type");
+            }
+            shortServerId = ((Long) value.getValue()).intValue();
+            return WriteResponse.success();
+
+        default:
+            return super.write(resourceId, value);
+        }
+
     }
 
     @Override

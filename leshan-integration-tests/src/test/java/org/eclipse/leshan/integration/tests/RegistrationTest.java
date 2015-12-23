@@ -56,8 +56,12 @@ public class RegistrationTest {
 
     @After
     public void stop() {
-        helper.client.stop();
-        helper.server.stop();
+        try {
+            helper.client.stop();
+            helper.server.stop();
+        } catch (Exception e) {
+            //
+        }
     }
 
     @Test
