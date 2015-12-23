@@ -23,6 +23,7 @@ import org.eclipse.leshan.core.request.CreateRequest;
 import org.eclipse.leshan.core.request.DeleteRequest;
 import org.eclipse.leshan.core.request.DiscoverRequest;
 import org.eclipse.leshan.core.request.ExecuteRequest;
+import org.eclipse.leshan.core.request.Identity;
 import org.eclipse.leshan.core.request.ObserveRequest;
 import org.eclipse.leshan.core.request.ReadRequest;
 import org.eclipse.leshan.core.request.WriteAttributesRequest;
@@ -45,23 +46,23 @@ public interface LwM2mObjectEnabler {
 
     List<Integer> getAvailableInstanceIds();
 
-    CreateResponse create(CreateRequest request);
+    CreateResponse create(CreateRequest request, Identity identity);
 
-    ReadResponse read(ReadRequest request, boolean internal);
+    ReadResponse read(ReadRequest request, Identity identity);
 
-    WriteResponse write(WriteRequest request);
+    WriteResponse write(WriteRequest request, Identity identity);
 
-    BootstrapWriteResponse write(BootstrapWriteRequest request);
+    BootstrapWriteResponse write(BootstrapWriteRequest request, Identity identity);
 
-    DeleteResponse delete(DeleteRequest request);
+    DeleteResponse delete(DeleteRequest request, Identity identity);
 
-    ExecuteResponse execute(ExecuteRequest request);
+    ExecuteResponse execute(ExecuteRequest request, Identity identity);
 
-    WriteAttributesResponse writeAttributes(WriteAttributesRequest request);
+    WriteAttributesResponse writeAttributes(WriteAttributesRequest request, Identity identity);
 
-    DiscoverResponse discover(DiscoverRequest request);
+    DiscoverResponse discover(DiscoverRequest request, Identity identity);
 
-    ObserveResponse observe(ObserveRequest request);
+    ObserveResponse observe(ObserveRequest request, Identity identity);
 
     void setNotifySender(NotifySender sender);
 }

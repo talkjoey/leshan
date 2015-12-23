@@ -33,6 +33,7 @@ import org.eclipse.leshan.core.request.BootstrapWriteRequest;
 import org.eclipse.leshan.core.request.CreateRequest;
 import org.eclipse.leshan.core.request.DeleteRequest;
 import org.eclipse.leshan.core.request.ExecuteRequest;
+import org.eclipse.leshan.core.request.Identity;
 import org.eclipse.leshan.core.request.ReadRequest;
 import org.eclipse.leshan.core.request.WriteRequest;
 import org.eclipse.leshan.core.request.WriteRequest.Mode;
@@ -103,14 +104,14 @@ public class ObjectEnabler extends BaseObjectEnabler {
     }
 
     @Override
-    protected ReadResponse doRead(ReadRequest request, boolean internal) {
+    protected ReadResponse doRead(ReadRequest request, Identity identity) {
         LwM2mPath path = request.getPath();
 
         // Manage Object case
         if (path.isObject()) {
             List<LwM2mObjectInstance> lwM2mObjectInstances = new ArrayList<>();
             for (Entry<Integer, LwM2mInstanceEnabler> entry : instances.entrySet()) {
-                lwM2mObjectInstances.add(getLwM2mObjectInstance(entry.getKey(), entry.getValue(), internal));
+                lwM2mObjectInstances.add(getLwM2mObjectInstance(entry.getKey(), entry.getValue(), identity));
             }
             return ReadResponse.success(new LwM2mObject(getId(), lwM2mObjectInstances));
         }
@@ -121,17 +122,18 @@ public class ObjectEnabler extends BaseObjectEnabler {
             return ReadResponse.notFound();
 
         if (path.getResourceId() == null) {
-            return ReadResponse.success(getLwM2mObjectInstance(path.getObjectInstanceId(), instance, internal));
+            return ReadResponse.success(getLwM2mObjectInstance(path.getObjectInstanceId(), instance, identity));
         }
 
         // Manage Resource case
         return instance.read(path.getResourceId());
     }
 
-    LwM2mObjectInstance getLwM2mObjectInstance(int instanceid, LwM2mInstanceEnabler instance, boolean internal) {
+    LwM2mObjectInstance getLwM2mObjectInstance(int instanceid, LwM2mInstanceEnabler instance, Identity identity) {
         List<LwM2mResource> resources = new ArrayList<>();
         for (ResourceModel resourceModel : getObjectModel().resources.values()) {
-            if (internal || resourceModel.operations.isReadable()) {
+            // if internal request (null identity) or readable
+            if (identity == null || resourceModel.operations.isReadable()) {
                 ReadResponse response = instance.read(resourceModel.id);
                 if (response.getCode() == ResponseCode.CONTENT && response.getContent() instanceof LwM2mResource)
                     resources.add((LwM2mResource) response.getContent());

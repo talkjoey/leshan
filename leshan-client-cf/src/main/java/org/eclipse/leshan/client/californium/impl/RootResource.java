@@ -23,6 +23,7 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
 import org.eclipse.leshan.client.servers.RegistrationEngine;
 import org.eclipse.leshan.core.request.DeleteRequest;
+import org.eclipse.leshan.core.request.Identity;
 import org.eclipse.leshan.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,15 +57,20 @@ public class RootResource extends CoapResource {
             return;
         }
 
-        LOG.debug("Bootstrap delete request on '/'");
+        Identity identity = ResourceUtil.extractIdentity(exchange);
+        LOG.debug("Bootstrap delete request on '/' from {}", identity.getPeerAddress());
 
-        // TODO from the bootstrap server?
+        // only if the request is from the bootstrap server
+        if (!regEngine.isBootstrapServer(identity)) {
+            exchange.respond(ResponseCode.METHOD_NOT_ALLOWED);
+            return;
+        }
 
         if (regEngine.bootstrapping()) {
             // TODO do not delete boostrap server (see 5.2.5.2 Bootstrap Delete)
             for (LwM2mObjectEnabler enabler : enablers.values()) {
                 for (Integer instanceId : enabler.getAvailableInstanceIds()) {
-                    enabler.delete(new DeleteRequest(enabler.getId(), instanceId));
+                    enabler.delete(new DeleteRequest(enabler.getId(), instanceId), identity);
                 }
             }
         } else {
@@ -73,5 +79,4 @@ public class RootResource extends CoapResource {
 
         exchange.respond(ResponseCode.DELETED);
     }
-
 }

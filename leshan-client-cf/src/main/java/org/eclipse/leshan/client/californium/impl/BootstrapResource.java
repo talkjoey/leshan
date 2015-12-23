@@ -20,6 +20,7 @@ import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.leshan.client.servers.RegistrationEngine;
+import org.eclipse.leshan.core.request.Identity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,15 +40,17 @@ public class BootstrapResource extends CoapResource {
 
     @Override
     public void handlePOST(CoapExchange exchange) {
-        LOG.debug("Bootstrap finish received");
+        Identity identity = ResourceUtil.extractIdentity(exchange);
+        LOG.debug("Bootstrap finish received from {}", identity.getPeerAddress());
 
-        // TODO from the bootstrap server?
+        // only if the request is from the bootstrap server
+        if (!regEngine.isBootstrapServer(identity)) {
+            exchange.respond(ResponseCode.BAD_REQUEST); // method not allowed?
+            return;
+        }
 
         if (regEngine.bootstrapping()) {
-
-            // finish bootstrap session
             regEngine.bootstrapFinished();
-
         } else {
             LOG.warn("The client is not in a boostrap sequence");
         }

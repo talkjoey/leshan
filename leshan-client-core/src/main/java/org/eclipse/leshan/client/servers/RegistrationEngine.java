@@ -28,6 +28,7 @@ import org.eclipse.leshan.client.request.LwM2mClientRequestSender;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
 import org.eclipse.leshan.core.request.BootstrapRequest;
 import org.eclipse.leshan.core.request.DeregisterRequest;
+import org.eclipse.leshan.core.request.Identity;
 import org.eclipse.leshan.core.request.RegisterRequest;
 import org.eclipse.leshan.core.request.UpdateRequest;
 import org.eclipse.leshan.core.response.BootstrapResponse;
@@ -48,6 +49,10 @@ public class RegistrationEngine {
     private String registrationID;
     private ScheduledFuture<?> regUpdateFuture;
     private final ScheduledExecutorService schedExecutor = Executors.newScheduledThreadPool(1);
+
+    // bootstrap sequence
+    private AtomicBoolean bootstrapping = new AtomicBoolean(false);
+    private CountDownLatch bootstrappingLatch = new CountDownLatch(1);
 
     public RegistrationEngine(String endpoint, Map<Integer, LwM2mObjectEnabler> objectEnablers,
             LwM2mClientRequestSender requestSender) {
@@ -74,9 +79,6 @@ public class RegistrationEngine {
         });
     }
 
-    private AtomicBoolean bootstrapping = new AtomicBoolean(false);
-    private CountDownLatch bootstrappingLatch = new CountDownLatch(1);
-
     /**
      * Notifies the engine that the bootstrap sequence is finished
      */
@@ -89,6 +91,20 @@ public class RegistrationEngine {
      */
     public boolean bootstrapping() {
         return bootstrapping.get();
+    }
+
+    /**
+     * @return <code>true</code> if the given request sender identity matches the bootstrap server (same IP address)
+     */
+    public boolean isBootstrapServer(Identity identity) {
+        ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
+
+        if (serversInfo == null || serversInfo.bootstrap == null) {
+            return false;
+        }
+
+        return serversInfo.bootstrap.getAddress().getAddress() != null
+                && serversInfo.bootstrap.getAddress().getAddress() == identity.getPeerAddress().getAddress();
     }
 
     private void bootstrap() {

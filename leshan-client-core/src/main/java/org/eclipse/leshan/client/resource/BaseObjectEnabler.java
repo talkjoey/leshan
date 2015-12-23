@@ -25,6 +25,7 @@ import org.eclipse.leshan.core.request.CreateRequest;
 import org.eclipse.leshan.core.request.DeleteRequest;
 import org.eclipse.leshan.core.request.DiscoverRequest;
 import org.eclipse.leshan.core.request.ExecuteRequest;
+import org.eclipse.leshan.core.request.Identity;
 import org.eclipse.leshan.core.request.ObserveRequest;
 import org.eclipse.leshan.core.request.ReadRequest;
 import org.eclipse.leshan.core.request.WriteAttributesRequest;
@@ -61,7 +62,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final CreateResponse create(CreateRequest request) {
+    public final CreateResponse create(CreateRequest request, Identity identity) {
         // we can not create new instance on single object
         if (objectModel != null && !objectModel.multiple) {
             return CreateResponse.methodNotAllowed();
@@ -78,29 +79,29 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final ReadResponse read(ReadRequest request, boolean internal) {
+    public final ReadResponse read(ReadRequest request, Identity identity) {
         LwM2mPath path = request.getPath();
 
-        // check if the resource is readable
-        if (path.isResource()) {
+        // check if the resource is readable.
+        if (path.isResource() && identity != null) {
             ResourceModel resourceModel = objectModel.resources.get(path.getResourceId());
-            if (resourceModel != null && !internal && !resourceModel.operations.isReadable()) {
+            if (resourceModel != null && !resourceModel.operations.isReadable()) {
                 return ReadResponse.methodNotAllowed();
             }
         }
 
-        return doRead(request, internal);
+        return doRead(request, identity);
 
         // TODO we could do a validation of response.getContent by comparing with the spec.
     }
 
-    protected ReadResponse doRead(ReadRequest request, boolean internal) {
+    protected ReadResponse doRead(ReadRequest request, Identity identity) {
         // This should be a not implemented error, but this is not defined in the spec.
         return ReadResponse.internalServerError("not implemented");
     }
 
     @Override
-    public final WriteResponse write(WriteRequest request) {
+    public final WriteResponse write(WriteRequest request, Identity identity) {
         LwM2mPath path = request.getPath();
 
         // check if the resource is writable
@@ -122,7 +123,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final BootstrapWriteResponse write(BootstrapWriteRequest request) {
+    public final BootstrapWriteResponse write(BootstrapWriteRequest request, Identity identity) {
         LwM2mPath path = request.getPath();
 
         // check if the resource is writable
@@ -144,7 +145,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final DeleteResponse delete(DeleteRequest request) {
+    public final DeleteResponse delete(DeleteRequest request, Identity identity) {
         // we can not create new instance on single object
         if (objectModel != null && !objectModel.multiple) {
             return DeleteResponse.methodNotAllowed();
@@ -159,7 +160,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final ExecuteResponse execute(ExecuteRequest request) {
+    public final ExecuteResponse execute(ExecuteRequest request, Identity identity) {
         LwM2mPath path = request.getPath();
 
         // only resource could be executed
@@ -182,14 +183,14 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public WriteAttributesResponse writeAttributes(WriteAttributesRequest request) {
+    public WriteAttributesResponse writeAttributes(WriteAttributesRequest request, Identity identity) {
         // TODO should be implemented here to be available for all object enabler
         // This should be a not implemented error, but this is not defined in the spec.
         return WriteAttributesResponse.internalServerError("not implemented");
     }
 
     @Override
-    public DiscoverResponse discover(DiscoverRequest request) {
+    public DiscoverResponse discover(DiscoverRequest request, Identity identity) {
         LwM2mPath path = request.getPath();
         if (path.isObject()) {
 
@@ -224,8 +225,8 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public ObserveResponse observe(ObserveRequest request) {
-        ReadResponse readResponse = this.read(new ReadRequest(request.getPath().toString()), false);
+    public ObserveResponse observe(ObserveRequest request, Identity identity) {
+        ReadResponse readResponse = this.read(new ReadRequest(request.getPath().toString()), identity);
         return new ObserveResponse(readResponse.getCode(), readResponse.getContent(), null,
                 readResponse.getErrorMessage());
     }
