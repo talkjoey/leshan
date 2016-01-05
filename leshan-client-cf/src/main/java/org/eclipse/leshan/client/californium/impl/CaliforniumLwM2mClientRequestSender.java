@@ -38,16 +38,21 @@ import org.slf4j.LoggerFactory;
 public class CaliforniumLwM2mClientRequestSender implements LwM2mClientRequestSender {
     private static final Logger LOG = LoggerFactory.getLogger(CaliforniumLwM2mClientRequestSender.class);
 
-    private final Endpoint clientEndpoint;
+    private final Endpoint nonSecureEndpoint;
+    private final Endpoint secureEndpoint;
+
     private final LwM2mClient client;
 
-    public CaliforniumLwM2mClientRequestSender(final Endpoint endpoint, final LwM2mClient client) {
-        this.clientEndpoint = endpoint;
+    public CaliforniumLwM2mClientRequestSender(final Endpoint secureEndpoint, final Endpoint nonSecureEndpoint,
+            final LwM2mClient client) {
+        this.secureEndpoint = secureEndpoint;
+        this.nonSecureEndpoint = nonSecureEndpoint;
         this.client = client;
     }
 
     @Override
-    public <T extends LwM2mResponse> T send(final InetSocketAddress serverAddress, final UplinkRequest<T> request, Long timeout) {
+    public <T extends LwM2mResponse> T send(final InetSocketAddress serverAddress, final boolean secure,
+            final UplinkRequest<T> request, Long timeout) {
         // Create the CoAP request from LwM2m request
         final CoapClientRequestBuilder coapClientRequestBuilder = new CoapClientRequestBuilder(serverAddress, client);
         request.accept(coapClientRequestBuilder);
@@ -72,15 +77,19 @@ public class CaliforniumLwM2mClientRequestSender implements LwM2mClientRequestSe
         coapRequest.addMessageObserver(syncMessageObserver);
 
         // Send CoAP request asynchronously
-        clientEndpoint.sendRequest(coapRequest);
+        if (secure)
+            secureEndpoint.sendRequest(coapRequest);
+        else
+            nonSecureEndpoint.sendRequest(coapRequest);
 
         // Wait for response, then return it
         return syncMessageObserver.waitForResponse();
     }
 
     @Override
-    public <T extends LwM2mResponse> void send(final InetSocketAddress serverAddress, final UplinkRequest<T> request,
-            final ResponseCallback<T> responseCallback, final ErrorCallback errorCallback) {
+    public <T extends LwM2mResponse> void send(final InetSocketAddress serverAddress, final boolean secure,
+            final UplinkRequest<T> request, final ResponseCallback<T> responseCallback,
+            final ErrorCallback errorCallback) {
         // Create the CoAP request from LwM2m request
         final CoapClientRequestBuilder coapClientRequestBuilder = new CoapClientRequestBuilder(serverAddress, client);
         request.accept(coapClientRequestBuilder);
@@ -106,7 +115,10 @@ public class CaliforniumLwM2mClientRequestSender implements LwM2mClientRequestSe
         });
 
         // Send CoAP request asynchronously
-        clientEndpoint.sendRequest(coapRequest);
+        if (secure)
+            secureEndpoint.sendRequest(coapRequest);
+        else
+            nonSecureEndpoint.sendRequest(coapRequest);
     }
 
     // ////// Request Observer Class definition/////////////

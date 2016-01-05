@@ -120,9 +120,10 @@ public class RegistrationEngine {
             try {
                 LOG.info("Starting bootstrap session " + bootstrapping.get());
 
-                // send bootstrap request
-                BootstrapResponse response = sender.send(serversInfo.bootstrap.getAddress(), new BootstrapRequest(
-                        endpoint), null);
+                // Send bootstrap request
+                ServerInfo boostrapServer = serversInfo.bootstrap;
+                BootstrapResponse response = sender.send(boostrapServer.getAddress(), boostrapServer.isSecure(),
+                        new BootstrapRequest(endpoint), null);
                 if (response == null) {
                     LOG.error("Bootstrap failed: timeout");
                 } else if (response.getCode() == ResponseCode.CHANGED) {
@@ -160,8 +161,8 @@ public class RegistrationEngine {
         }
 
         // send register request
-        RegisterResponse response = sender.send(dmInfo.getAddress(), new RegisterRequest(endpoint, dmInfo.lifetime,
-                null, dmInfo.binding, null, null), null);
+        RegisterResponse response = sender.send(dmInfo.getAddress(), dmInfo.isSecure(), new RegisterRequest(endpoint,
+                dmInfo.lifetime, null, dmInfo.binding, null, null), null);
         if (response == null) {
             registrationID = null;
             LOG.error("Registration failed: timeout");
@@ -192,7 +193,8 @@ public class RegistrationEngine {
         }
 
         // Send deregister request
-        DeregisterResponse response = sender.send(dmInfo.getAddress(), new DeregisterRequest(registrationID), null);
+        DeregisterResponse response = sender.send(dmInfo.getAddress(), dmInfo.isSecure(), new DeregisterRequest(
+                registrationID), null);
         if (response == null) {
             registrationID = null;
             LOG.info("Deregistration failed: timeout");
@@ -219,8 +221,8 @@ public class RegistrationEngine {
         }
 
         // Send update
-        final UpdateResponse response = sender.send(dmInfo.getAddress(), new UpdateRequest(registrationID, null, null,
-                null, null), null);
+        final UpdateResponse response = sender.send(dmInfo.getAddress(), dmInfo.isSecure(), new UpdateRequest(
+                registrationID, null, null, null, null), null);
         if (response == null) {
             // we can contact device management so we must start a new bootstrap session
             registrationID = null;

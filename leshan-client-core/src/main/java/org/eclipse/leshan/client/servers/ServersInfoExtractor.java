@@ -15,7 +15,15 @@
  *******************************************************************************/
 package org.eclipse.leshan.client.servers;
 
-import static org.eclipse.leshan.client.util.LwM2mId.*;
+import static org.eclipse.leshan.client.util.LwM2mId.SECURITY_ID;
+import static org.eclipse.leshan.client.util.LwM2mId.SEC_BOOTSTRAP;
+import static org.eclipse.leshan.client.util.LwM2mId.SEC_SECURITY_MODE;
+import static org.eclipse.leshan.client.util.LwM2mId.SEC_SERVER_ID;
+import static org.eclipse.leshan.client.util.LwM2mId.SEC_SERVER_URI;
+import static org.eclipse.leshan.client.util.LwM2mId.SERVER_ID;
+import static org.eclipse.leshan.client.util.LwM2mId.SRV_BINDING;
+import static org.eclipse.leshan.client.util.LwM2mId.SRV_LIFETIME;
+import static org.eclipse.leshan.client.util.LwM2mId.SRV_SERVER_ID;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -46,17 +54,22 @@ public class ServersInfoExtractor {
         for (LwM2mObjectInstance security : securities.getInstances().values()) {
             try {
                 if ((boolean) security.getResource(SEC_BOOTSTRAP).getValue()) {
-                    // create bootstrap info
-                    ServerInfo info = new ServerInfo();
-                    info.serverId = (long) security.getResource(SEC_SERVER_ID).getValue();
-                    info.serverUri = new URI((String) security.getResource(SEC_SERVER_URI).getValue());
-
-                    infos.bootstrap = info;
+                    if (infos.bootstrap != null) {
+                        LOG.warn("There is more than one bootstrap configuration in security object.");
+                    } else {
+                        // create bootstrap info
+                        ServerInfo info = new ServerInfo();
+                        info.serverId = (long) security.getResource(SEC_SERVER_ID).getValue();
+                        info.serverUri = new URI((String) security.getResource(SEC_SERVER_URI).getValue());
+                        info.secureMode = (long) security.getResource(SEC_SECURITY_MODE).getValue();
+                        infos.bootstrap = info;
+                    }
                 } else {
                     // create device management info
                     DmServerInfo info = new DmServerInfo();
                     info.serverUri = new URI((String) security.getResource(SEC_SERVER_URI).getValue());
                     info.serverId = (long) security.getResource(SEC_SERVER_ID).getValue();
+                    info.secureMode = (long) security.getResource(SEC_SECURITY_MODE).getValue();
 
                     // search corresponding device management server
                     for (LwM2mObjectInstance server : servers.getInstances().values()) {

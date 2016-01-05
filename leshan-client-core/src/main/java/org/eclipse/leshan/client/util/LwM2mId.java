@@ -30,6 +30,10 @@ public interface LwM2mId {
 
     public static final int SEC_SERVER_URI = 0;
     public static final int SEC_BOOTSTRAP = 1;
+    public static final int SEC_SECURITY_MODE = 2;
+    public static final int SEC_PUBKEY_IDENTITY = 3;
+    public static final int SEC_SERVER_PUBKEY = 4;
+    public static final int SEC_SECRET_KEY = 5;
     public static final int SEC_SERVER_ID = 10;
 
     /* SERVER RESOURCES */

@@ -35,6 +35,7 @@ public class LeshanClientBuilder {
 
     private String endpoint;
     private InetSocketAddress localAddress;
+    private InetSocketAddress localSecureAddress;
     private CoapServer localServer;
     private List<LwM2mObjectEnabler> objectEnablers;
 
@@ -48,6 +49,14 @@ public class LeshanClientBuilder {
      */
     public LeshanClientBuilder setLocalAddress(String hostname, int port) {
         this.localAddress = new InetSocketAddress(hostname, port);
+        return this;
+    }
+
+    /**
+     * Sets the local secure end-point address
+     */
+    public LeshanClientBuilder setLocalSecureAddress(String hostname, int port) {
+        this.localSecureAddress = new InetSocketAddress(hostname, port);
         return this;
     }
 
@@ -75,6 +84,9 @@ public class LeshanClientBuilder {
         if (localAddress == null) {
             localAddress = new InetSocketAddress(0);
         }
+        if (localSecureAddress == null) {
+            localSecureAddress = new InetSocketAddress(0);
+        }
         if (localServer == null) {
             localServer = new CoapServer() {
                 @Override
@@ -92,6 +104,6 @@ public class LeshanClientBuilder {
                     .setInstancesForObject(LwM2mId.DEVICE_ID, new Device("Eclipse Leshan", "TEST-123", "12345", "U"));
             objectEnablers = initializer.createMandatory();
         }
-        return new LeshanClient(endpoint, localAddress, objectEnablers, localServer);
+        return new LeshanClient(endpoint, localAddress, localSecureAddress, objectEnablers, localServer);
     }
 }

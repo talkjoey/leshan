@@ -25,16 +25,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
+import org.eclipse.californium.core.network.config.NetworkConfig;
+import org.eclipse.californium.scandium.DTLSConnector;
+import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
+import org.eclipse.californium.scandium.config.DtlsConnectorConfig.Builder;
 import org.eclipse.leshan.client.LwM2mClient;
 import org.eclipse.leshan.client.californium.impl.BootstrapResource;
 import org.eclipse.leshan.client.californium.impl.CaliforniumLwM2mClientRequestSender;
 import org.eclipse.leshan.client.californium.impl.ObjectResource;
 import org.eclipse.leshan.client.californium.impl.RootResource;
+import org.eclipse.leshan.client.californium.impl.SecurityObjectPskStore;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
 import org.eclipse.leshan.client.servers.DmServerInfo;
 import org.eclipse.leshan.client.servers.RegistrationEngine;
 import org.eclipse.leshan.client.servers.ServersInfo;
 import org.eclipse.leshan.client.servers.ServersInfoExtractor;
+import org.eclipse.leshan.client.util.LwM2mId;
 import org.eclipse.leshan.core.request.UplinkRequest;
 import org.eclipse.leshan.core.response.ErrorCallback;
 import org.eclipse.leshan.core.response.LwM2mResponse;
@@ -58,24 +64,47 @@ public class LeshanClient implements LwM2mClient {
 
     private final RegistrationEngine engine;
 
-    public LeshanClient(final String endpoint, final InetSocketAddress clientAddress,
-            final List<LwM2mObjectEnabler> objectEnablers, final CoapServer serverLocal) {
+    public LeshanClient(final String endpoint, final InetSocketAddress localAddress,
+            InetSocketAddress localSecureAddress, final List<LwM2mObjectEnabler> objectEnablers,
+            final CoapServer serverLocal) {
 
         Validate.notNull(endpoint);
-        Validate.notNull(clientAddress);
+        Validate.notNull(localAddress);
+        Validate.notNull(localSecureAddress);
         Validate.notNull(serverLocal);
         Validate.notEmpty(objectEnablers);
 
-        // Create CoAP endpoint
-        final Endpoint coapEndpoint = new CoapEndpoint(clientAddress);
-        serverLocal.addEndpoint(coapEndpoint);
+        // Object enablers
+        this.objectEnablers = new HashMap<>();
+        for (LwM2mObjectEnabler enabler : objectEnablers) {
+            if (this.objectEnablers.containsKey(enabler.getId())) {
+                throw new IllegalArgumentException(String.format(
+                        "There is several objectEnablers with the same id %d.", enabler.getId()));
+            }
+            this.objectEnablers.put(enabler.getId(), enabler);
+        }
+
+        // Create CoAP endpoints
+        Endpoint nonSecureEndpoint = serverLocal.getEndpoint(localAddress);
+        if (nonSecureEndpoint == null) {
+            nonSecureEndpoint = new CoapEndpoint(localAddress);
+            serverLocal.addEndpoint(nonSecureEndpoint);
+        }
+
+        LwM2mObjectEnabler securityEnabler = this.objectEnablers.get(LwM2mId.SECURITY_ID);
+        if (securityEnabler == null)
+            throw new IllegalArgumentException("Security object is mandatory");
+
+        Builder builder = new DtlsConnectorConfig.Builder(localSecureAddress);
+        builder.setPskStore(new SecurityObjectPskStore(securityEnabler));
+        Endpoint secureEndpoint = new CoapEndpoint(new DTLSConnector(builder.build()), NetworkConfig.getStandard());
+        serverLocal.addEndpoint(secureEndpoint);
         clientSideServer = serverLocal;
 
         // Create sender
-        requestSender = new CaliforniumLwM2mClientRequestSender(serverLocal.getEndpoint(clientAddress), this);
+        requestSender = new CaliforniumLwM2mClientRequestSender(secureEndpoint, nonSecureEndpoint, this);
 
         // Create registration engine
-        this.objectEnablers = new HashMap<>();
         engine = new RegistrationEngine(endpoint, this.objectEnablers, requestSender);
 
         // Create CoAP resources for each lwm2m Objects.
@@ -84,8 +113,6 @@ public class LeshanClient implements LwM2mClient {
                 throw new IllegalArgumentException("Trying to load Client Object of name '" + enabler.getId()
                         + "' when one was already added.");
             }
-            this.objectEnablers.put(enabler.getId(), enabler);
-
             final ObjectResource clientObject = new ObjectResource(enabler, engine);
             clientSideServer.add(clientObject);
         }
@@ -167,7 +194,7 @@ public class LeshanClient implements LwM2mClient {
         ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
         DmServerInfo dmInfo = serversInfo.deviceMangements.values().iterator().next();
         InetSocketAddress serverAddress = new InetSocketAddress(dmInfo.serverUri.getHost(), dmInfo.serverUri.getPort());
-        return requestSender.send(serverAddress, request, null);
+        return requestSender.send(serverAddress, false, request, null);
     }
 
     @Override
@@ -179,7 +206,7 @@ public class LeshanClient implements LwM2mClient {
         ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
         DmServerInfo dmInfo = serversInfo.deviceMangements.values().iterator().next();
         InetSocketAddress serverAddress = new InetSocketAddress(dmInfo.serverUri.getHost(), dmInfo.serverUri.getPort());
-        return requestSender.send(serverAddress, request, timeout);
+        return requestSender.send(serverAddress, false, request, timeout);
     }
 
     @Override
@@ -191,7 +218,7 @@ public class LeshanClient implements LwM2mClient {
         ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
         DmServerInfo dmInfo = serversInfo.deviceMangements.values().iterator().next();
         InetSocketAddress serverAddress = new InetSocketAddress(dmInfo.serverUri.getHost(), dmInfo.serverUri.getPort());
-        requestSender.send(serverAddress, request, responseCallback, errorCallback);
+        requestSender.send(serverAddress, false, request, responseCallback, errorCallback);
     }
 
     @Override

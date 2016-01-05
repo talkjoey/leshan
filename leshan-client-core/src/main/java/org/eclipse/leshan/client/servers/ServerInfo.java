@@ -22,9 +22,15 @@ public class ServerInfo {
 
     public long serverId;
     public URI serverUri;
+    // TODO use SecureMode from server.core
+    public long secureMode;
 
     public InetSocketAddress getAddress() {
         return new InetSocketAddress(serverUri.getHost(), serverUri.getPort());
+    }
+
+    public boolean isSecure() {
+        return secureMode != 3;
     }
 
     @Override

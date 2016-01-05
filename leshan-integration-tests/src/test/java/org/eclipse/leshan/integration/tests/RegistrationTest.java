@@ -89,8 +89,8 @@ public class RegistrationTest {
         ArrayList<LwM2mObjectEnabler> objects = new ArrayList<>();
         objects.add(objectEnabler);
         objects.add(objectEnabler2);
-        helper.client = new LeshanClient("test", new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), objects,
-                new CoapServer());
+        helper.client = new LeshanClient("test", new InetSocketAddress(InetAddress.getLoopbackAddress(), 0),
+                new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), objects, new CoapServer());
     }
 
     @Test
