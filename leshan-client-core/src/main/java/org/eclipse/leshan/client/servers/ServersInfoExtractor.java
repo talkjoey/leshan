@@ -48,8 +48,8 @@ public class ServersInfoExtractor {
             return null;
 
         ServersInfo infos = new ServersInfo();
-        LwM2mObject securities = (LwM2mObject) securityEnabler.read(new ReadRequest(SECURITY_ID), null).getContent();
-        LwM2mObject servers = (LwM2mObject) serverEnabler.read(new ReadRequest(SERVER_ID), null).getContent();
+        LwM2mObject securities = (LwM2mObject) securityEnabler.read(null, new ReadRequest(SECURITY_ID)).getContent();
+        LwM2mObject servers = (LwM2mObject) serverEnabler.read(null, new ReadRequest(SERVER_ID)).getContent();
 
         for (LwM2mObjectInstance security : securities.getInstances().values()) {
             try {

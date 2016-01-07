@@ -46,23 +46,23 @@ public interface LwM2mObjectEnabler {
 
     List<Integer> getAvailableInstanceIds();
 
-    CreateResponse create(CreateRequest request, Identity identity);
+    CreateResponse create(Identity identity, CreateRequest request);
 
-    ReadResponse read(ReadRequest request, Identity identity);
+    ReadResponse read(Identity identity, ReadRequest request);
 
-    WriteResponse write(WriteRequest request, Identity identity);
+    WriteResponse write(Identity identity, WriteRequest request);
 
-    BootstrapWriteResponse write(BootstrapWriteRequest request, Identity identity);
+    BootstrapWriteResponse write(Identity identity, BootstrapWriteRequest request);
 
-    DeleteResponse delete(DeleteRequest request, Identity identity);
+    DeleteResponse delete(Identity identity, DeleteRequest request);
 
-    ExecuteResponse execute(ExecuteRequest request, Identity identity);
+    ExecuteResponse execute(Identity identity, ExecuteRequest request);
 
-    WriteAttributesResponse writeAttributes(WriteAttributesRequest request, Identity identity);
+    WriteAttributesResponse writeAttributes(Identity identity, WriteAttributesRequest request);
 
-    DiscoverResponse discover(DiscoverRequest request, Identity identity);
+    DiscoverResponse discover(Identity identity, DiscoverRequest request);
 
-    ObserveResponse observe(ObserveRequest request, Identity identity);
+    ObserveResponse observe(Identity identity, ObserveRequest request);
 
     void setNotifySender(NotifySender sender);
 }

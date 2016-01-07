@@ -62,7 +62,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final CreateResponse create(CreateRequest request, Identity identity) {
+    public final CreateResponse create(Identity identity, CreateRequest request) {
         // we can not create new instance on single object
         if (objectModel != null && !objectModel.multiple) {
             return CreateResponse.methodNotAllowed();
@@ -79,7 +79,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final ReadResponse read(ReadRequest request, Identity identity) {
+    public final ReadResponse read(Identity identity, ReadRequest request) {
         LwM2mPath path = request.getPath();
 
         // check if the resource is readable.
@@ -101,7 +101,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final WriteResponse write(WriteRequest request, Identity identity) {
+    public final WriteResponse write(Identity identity, WriteRequest request) {
         LwM2mPath path = request.getPath();
 
         // check if the resource is writable
@@ -123,7 +123,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final BootstrapWriteResponse write(BootstrapWriteRequest request, Identity identity) {
+    public final BootstrapWriteResponse write(Identity identity, BootstrapWriteRequest request) {
         LwM2mPath path = request.getPath();
 
         // check if the resource is writable
@@ -145,7 +145,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final DeleteResponse delete(DeleteRequest request, Identity identity) {
+    public final DeleteResponse delete(Identity identity, DeleteRequest request) {
         // we can not create new instance on single object
         if (objectModel != null && !objectModel.multiple) {
             return DeleteResponse.methodNotAllowed();
@@ -160,7 +160,7 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final ExecuteResponse execute(ExecuteRequest request, Identity identity) {
+    public final ExecuteResponse execute(Identity identity, ExecuteRequest request) {
         LwM2mPath path = request.getPath();
 
         // only resource could be executed
@@ -183,14 +183,14 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public WriteAttributesResponse writeAttributes(WriteAttributesRequest request, Identity identity) {
+    public WriteAttributesResponse writeAttributes(Identity identity, WriteAttributesRequest request) {
         // TODO should be implemented here to be available for all object enabler
         // This should be a not implemented error, but this is not defined in the spec.
         return WriteAttributesResponse.internalServerError("not implemented");
     }
 
     @Override
-    public DiscoverResponse discover(DiscoverRequest request, Identity identity) {
+    public DiscoverResponse discover(Identity identity, DiscoverRequest request) {
         LwM2mPath path = request.getPath();
         if (path.isObject()) {
 
@@ -225,8 +225,8 @@ public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public ObserveResponse observe(ObserveRequest request, Identity identity) {
-        ReadResponse readResponse = this.read(new ReadRequest(request.getPath().toString()), identity);
+    public ObserveResponse observe(Identity identity, ObserveRequest request) {
+        ReadResponse readResponse = this.read(identity, new ReadRequest(request.getPath().toString()));
         return new ObserveResponse(readResponse.getCode(), readResponse.getContent(), null,
                 readResponse.getErrorMessage());
     }

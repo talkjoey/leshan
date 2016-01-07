@@ -64,7 +64,7 @@ public class RootResource extends CoapResource {
             // TODO do not delete boostrap server (see 5.2.5.2 Bootstrap Delete)
             for (LwM2mObjectEnabler enabler : enablers.values()) {
                 for (Integer instanceId : enabler.getAvailableInstanceIds()) {
-                    enabler.delete(new DeleteRequest(enabler.getId(), instanceId), identity);
+                    enabler.delete(identity, new DeleteRequest(enabler.getId(), instanceId));
                 }
             }
         } else {

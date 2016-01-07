@@ -48,7 +48,7 @@ public class SecurityObjectPskStore implements PskStore {
         if (identity == null)
             return null;
 
-        LwM2mObject securities = (LwM2mObject) securityEnabler.read(new ReadRequest(SECURITY_ID), null).getContent();
+        LwM2mObject securities = (LwM2mObject) securityEnabler.read(null, new ReadRequest(SECURITY_ID)).getContent();
         for (LwM2mObjectInstance security : securities.getInstances().values()) {
             long securityMode = (long) security.getResource(SEC_SECURITY_MODE).getValue();
             // TODO use SecurityMode from serve.core ?
@@ -67,7 +67,7 @@ public class SecurityObjectPskStore implements PskStore {
         if (inetAddress == null)
             return null;
 
-        LwM2mObject securities = (LwM2mObject) securityEnabler.read(new ReadRequest(SECURITY_ID), null).getContent();
+        LwM2mObject securities = (LwM2mObject) securityEnabler.read(null, new ReadRequest(SECURITY_ID)).getContent();
         for (LwM2mObjectInstance security : securities.getInstances().values()) {
             long securityMode = (long) security.getResource(SEC_SECURITY_MODE).getValue();
             // TODO use SecurityMode from serve.core ?

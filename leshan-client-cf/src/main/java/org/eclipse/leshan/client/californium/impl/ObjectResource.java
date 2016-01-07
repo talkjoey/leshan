@@ -107,7 +107,7 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
 
         // Manage Discover Request
         if (exchange.getRequestOptions().getAccept() == MediaTypeRegistry.APPLICATION_LINK_FORMAT) {
-            DiscoverResponse response = nodeEnabler.discover(new DiscoverRequest(URI), identity);
+            DiscoverResponse response = nodeEnabler.discover(identity, new DiscoverRequest(URI));
             if (response.getCode().isError()) {
                 exchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
             } else {
@@ -117,7 +117,7 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
         }
         // Manage Observe Request
         else if (exchange.getRequestOptions().hasObserve()) {
-            ObserveResponse response = nodeEnabler.observe(new ObserveRequest(URI), identity);
+            ObserveResponse response = nodeEnabler.observe(identity, new ObserveRequest(URI));
             if (response.getCode() == org.eclipse.leshan.ResponseCode.CONTENT) {
                 LwM2mPath path = new LwM2mPath(URI);
                 LwM2mNode content = response.getContent();
@@ -132,7 +132,7 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
         }
         // Manage Read Request
         else {
-            ReadResponse response = nodeEnabler.read(new ReadRequest(URI), identity);
+            ReadResponse response = nodeEnabler.read(identity, new ReadRequest(URI));
             if (response.getCode() == org.eclipse.leshan.ResponseCode.CONTENT) {
                 LwM2mPath path = new LwM2mPath(URI);
                 LwM2mNode content = response.getContent();
@@ -161,8 +161,8 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
 
         // Manage Write Attributes Request
         if (spec != null) {
-            WriteAttributesResponse response = nodeEnabler.writeAttributes(new WriteAttributesRequest(URI, spec),
-                    identity);
+            WriteAttributesResponse response = nodeEnabler.writeAttributes(identity,
+                    new WriteAttributesRequest(URI, spec));
             coapExchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
             return;
         }
@@ -175,12 +175,12 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
                 LwM2mModel model = new LwM2mModel(nodeEnabler.getObjectModel());
                 lwM2mNode = LwM2mNodeDecoder.decode(coapExchange.getRequestPayload(), contentFormat, path, model);
                 if (registrationEngine.bootstrapping()) {
-                    BootstrapWriteResponse response = nodeEnabler.write(new BootstrapWriteRequest(path, lwM2mNode,
-                            contentFormat), identity);
+                    BootstrapWriteResponse response = nodeEnabler.write(identity, new BootstrapWriteRequest(path, lwM2mNode,
+                                    contentFormat));
                     coapExchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
                 } else {
-                    WriteResponse response = nodeEnabler.write(new WriteRequest(Mode.REPLACE, contentFormat, URI,
-                            lwM2mNode), identity);
+                    WriteResponse response = nodeEnabler.write(identity, new WriteRequest(Mode.REPLACE, contentFormat, URI,
+                                    lwM2mNode));
                     coapExchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
                 }
 
@@ -204,7 +204,7 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
         // Manage Execute Request
         if (path.isResource()) {
             ExecuteResponse response = nodeEnabler.execute(
-                    new ExecuteRequest(URI, new String(exchange.getRequestPayload())), identity);
+                    identity, new ExecuteRequest(URI, new String(exchange.getRequestPayload())));
             exchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
             return;
         }
@@ -237,7 +237,7 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
                 return;
             }
 
-            CreateResponse response = nodeEnabler.create(new CreateRequest(contentFormat, URI, resources), identity);
+            CreateResponse response = nodeEnabler.create(identity, new CreateRequest(contentFormat, URI, resources));
             if (response.getCode() == org.eclipse.leshan.ResponseCode.CREATED) {
                 exchange.setLocationPath(response.getLocation());
                 exchange.respond(fromLwM2mCode(response.getCode()));
@@ -259,7 +259,7 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
         String URI = coapExchange.getRequestOptions().getUriPathString();
         Identity identity = extractIdentity(coapExchange);
 
-        DeleteResponse response = nodeEnabler.delete(new DeleteRequest(URI), identity);
+        DeleteResponse response = nodeEnabler.delete(identity, new DeleteRequest(URI));
         coapExchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
     }
 
