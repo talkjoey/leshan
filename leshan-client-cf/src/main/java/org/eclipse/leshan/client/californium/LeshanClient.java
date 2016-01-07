@@ -144,4 +144,8 @@ public class LeshanClient implements LwM2mClient {
     public List<LwM2mObjectEnabler> getObjectEnablers() {
         return new ArrayList<>(objectEnablers.values());
     }
+
+    public CoapServer getCoapServer() {
+        return clientSideServer;
+    }
 }
