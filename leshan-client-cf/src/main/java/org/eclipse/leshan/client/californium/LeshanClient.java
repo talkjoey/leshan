@@ -36,6 +36,7 @@ import org.eclipse.leshan.client.californium.impl.ObjectResource;
 import org.eclipse.leshan.client.californium.impl.RootResource;
 import org.eclipse.leshan.client.californium.impl.SecurityObjectPskStore;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
+import org.eclipse.leshan.client.servers.BootstrapHandler;
 import org.eclipse.leshan.client.servers.RegistrationEngine;
 import org.eclipse.leshan.client.util.LwM2mId;
 import org.eclipse.leshan.util.Validate;
@@ -54,6 +55,7 @@ public class LeshanClient implements LwM2mClient {
     private final CoapServer clientSideServer;
     private final CaliforniumLwM2mClientRequestSender requestSender;
     private final RegistrationEngine engine;
+    private final BootstrapHandler bootstrapHandler;
 
     public LeshanClient(final String endpoint, final InetSocketAddress localAddress,
             InetSocketAddress localSecureAddress, final List<LwM2mObjectEnabler> objectEnablers) {
@@ -90,14 +92,17 @@ public class LeshanClient implements LwM2mClient {
         requestSender = new CaliforniumLwM2mClientRequestSender(secureEndpoint, nonSecureEndpoint, this);
 
         // Create registration engine
-        engine = new RegistrationEngine(endpoint, this.objectEnablers, requestSender);
+        bootstrapHandler = new BootstrapHandler(this.objectEnablers);
+
+        // Create registration engine
+        engine = new RegistrationEngine(endpoint, this.objectEnablers, requestSender, bootstrapHandler);
 
         // Create CoAP Server
         clientSideServer = new CoapServer() {
             @Override
             protected Resource createRoot() {
                 // Use to handle Delete on "/"
-                return new RootResource(LeshanClient.this.objectEnablers, engine);
+                return new RootResource(bootstrapHandler);
             }
         };
         clientSideServer.addEndpoint(secureEndpoint);
@@ -105,12 +110,12 @@ public class LeshanClient implements LwM2mClient {
 
         // Create CoAP resources for each lwm2m Objects.
         for (LwM2mObjectEnabler enabler : objectEnablers) {
-            final ObjectResource clientObject = new ObjectResource(enabler, engine);
+            final ObjectResource clientObject = new ObjectResource(enabler, bootstrapHandler);
             clientSideServer.add(clientObject);
         }
 
         // Create CoAP resources needed for the bootstrap sequence
-        clientSideServer.add(new BootstrapResource(engine));
+        clientSideServer.add(new BootstrapResource(bootstrapHandler));
 
         // De-register on shutdown and stop client.
         Runtime.getRuntime().addShutdownHook(new Thread() {

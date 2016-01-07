@@ -16,46 +16,30 @@
 package org.eclipse.leshan.client.californium.impl;
 
 import org.eclipse.californium.core.CoapResource;
-import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
-import org.eclipse.leshan.client.servers.RegistrationEngine;
+import org.eclipse.leshan.client.servers.BootstrapHandler;
+import org.eclipse.leshan.core.request.BootstrapFinishRequest;
 import org.eclipse.leshan.core.request.Identity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.eclipse.leshan.core.response.BootstrapFinishResponse;
 
 /**
  * A CoAP {@link Resource} in charge of handling the Bootstrap Finish indication from the bootstrap server.
  */
 public class BootstrapResource extends CoapResource {
 
-    private static final Logger LOG = LoggerFactory.getLogger(BootstrapResource.class);
+    private final BootstrapHandler bootstrapHandler;
 
-    private final RegistrationEngine regEngine;
-
-    public BootstrapResource(RegistrationEngine regEngine) {
+    public BootstrapResource(BootstrapHandler bootstrapHandler) {
         super("bs", false);
-        this.regEngine = regEngine;
+        this.bootstrapHandler = bootstrapHandler;
     }
 
     @Override
     public void handlePOST(CoapExchange exchange) {
         Identity identity = ResourceUtil.extractIdentity(exchange);
-        LOG.debug("Bootstrap finish received from {}", identity.getPeerAddress());
-
-        // only if the request is from the bootstrap server
-        if (!regEngine.isBootstrapServer(identity)) {
-            exchange.respond(ResponseCode.BAD_REQUEST); // method not allowed?
-            return;
-        }
-
-        if (regEngine.bootstrapping()) {
-            regEngine.bootstrapFinished();
-        } else {
-            LOG.warn("The client is not in a boostrap sequence");
-        }
-
-        exchange.respond(ResponseCode.CHANGED);
+        BootstrapFinishResponse response = bootstrapHandler.finished(identity, new BootstrapFinishRequest());
+        exchange.respond(ResourceUtil.fromLwM2mCode(response.getCode()), response.getErrorMessage());
     }
 
 }

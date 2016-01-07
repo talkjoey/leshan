@@ -16,12 +16,10 @@
 package org.eclipse.leshan.client.servers;
 
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.leshan.ResponseCode;
 import org.eclipse.leshan.client.request.LwM2mClientRequestSender;
@@ -29,7 +27,6 @@ import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
 import org.eclipse.leshan.client.util.LinkFormatHelper;
 import org.eclipse.leshan.core.request.BootstrapRequest;
 import org.eclipse.leshan.core.request.DeregisterRequest;
-import org.eclipse.leshan.core.request.Identity;
 import org.eclipse.leshan.core.request.RegisterRequest;
 import org.eclipse.leshan.core.request.UpdateRequest;
 import org.eclipse.leshan.core.response.BootstrapResponse;
@@ -46,20 +43,18 @@ public class RegistrationEngine {
     private String endpoint;
     private LwM2mClientRequestSender sender;
     private final Map<Integer, LwM2mObjectEnabler> objectEnablers;
+    private final BootstrapHandler bootstrapHandler;
 
     // registration update
     private String registrationID;
     private ScheduledFuture<?> regUpdateFuture;
     private final ScheduledExecutorService schedExecutor = Executors.newScheduledThreadPool(1);
 
-    // bootstrap sequence
-    private AtomicBoolean bootstrapping = new AtomicBoolean(false);
-    private CountDownLatch bootstrappingLatch = new CountDownLatch(1);
-
     public RegistrationEngine(String endpoint, Map<Integer, LwM2mObjectEnabler> objectEnablers,
-            LwM2mClientRequestSender requestSender) {
+            LwM2mClientRequestSender requestSender, BootstrapHandler bootstrapState) {
         this.endpoint = endpoint;
         this.objectEnablers = objectEnablers;
+        this.bootstrapHandler = bootstrapState;
 
         sender = requestSender;
     }
@@ -81,34 +76,6 @@ public class RegistrationEngine {
         });
     }
 
-    /**
-     * Notifies the engine that the bootstrap sequence is finished
-     */
-    public void bootstrapFinished() {
-        bootstrappingLatch.countDown();
-    }
-
-    /**
-     * @return <code>true</code> if the client is currently bootstrapping
-     */
-    public boolean bootstrapping() {
-        return bootstrapping.get();
-    }
-
-    /**
-     * @return <code>true</code> if the given request sender identity matches the bootstrap server (same IP address)
-     */
-    public boolean isBootstrapServer(Identity identity) {
-        ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
-
-        if (serversInfo == null || serversInfo.bootstrap == null) {
-            return false;
-        }
-
-        return serversInfo.bootstrap.getAddress().getAddress() != null
-                && serversInfo.bootstrap.getAddress().getAddress().equals(identity.getPeerAddress().getAddress());
-    }
-
     private void bootstrap() {
         ServersInfo serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
 
@@ -117,35 +84,29 @@ public class RegistrationEngine {
             return;
         }
 
-        if (bootstrapping.compareAndSet(false, true)) {
-            try {
-                LOG.info("Starting bootstrap session " + bootstrapping.get());
+        if (bootstrapHandler.tryToInitSession(serversInfo.bootstrap)) {
+            LOG.info("Starting bootstrap session ");
 
-                // Send bootstrap request
-                ServerInfo boostrapServer = serversInfo.bootstrap;
-                BootstrapResponse response = sender.send(boostrapServer.getAddress(), boostrapServer.isSecure(),
-                        new BootstrapRequest(endpoint), null);
-                if (response == null) {
-                    LOG.error("Bootstrap failed: timeout");
-                } else if (response.getCode() == ResponseCode.CHANGED) {
-                    LOG.info("Bootstrap started");
-                    // wait until it is finished (or too late)
-                    bootstrappingLatch = new CountDownLatch(1);
-                    boolean timeout = !bootstrappingLatch.await(10, TimeUnit.SECONDS);
-                    if (timeout) {
-                        LOG.error("Bootstrap sequence timeout");
-                    } else {
-                        serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
-                        LOG.info("Bootstrap finished {}", serversInfo);
-                        register();
-                    }
+            // Send bootstrap request
+            ServerInfo boostrapServer = serversInfo.bootstrap;
+            BootstrapResponse response = sender.send(boostrapServer.getAddress(), boostrapServer.isSecure(),
+                    new BootstrapRequest(endpoint), null);
+            if (response == null) {
+                LOG.error("Bootstrap failed: timeout");
+            } else if (response.getCode() == ResponseCode.CHANGED) {
+                LOG.info("Bootstrap started");
+                // wait until it is finished (or too late)
+                boolean timeout = !bootstrapHandler.waitBoostrapFinished(10);
+                if (timeout) {
+                    LOG.error("Bootstrap sequence timeout");
+                    bootstrapHandler.cancelSession();
                 } else {
-                    LOG.error("Bootstrap failed: {}", response.getCode());
+                    serversInfo = ServersInfoExtractor.getInfo(objectEnablers);
+                    LOG.info("Bootstrap finished {}", serversInfo);
+                    register();
                 }
-            } catch (InterruptedException e) {
-                LOG.error("Error while waiting for bootstrap finish", e);
-            } finally {
-                bootstrapping.set(false);
+            } else {
+                LOG.error("Bootstrap failed: {}", response.getCode());
             }
         } else {
             LOG.info("Bootstrap sequence already started");

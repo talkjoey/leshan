@@ -41,11 +41,11 @@ public class BootstrapDeleteResponse extends AbstractLwM2mResponse {
 
     // Syntactic sugar static constructors :
 
-    public static DeleteResponse success() {
-        return new DeleteResponse(ResponseCode.DELETED, null);
+    public static BootstrapDeleteResponse success() {
+        return new BootstrapDeleteResponse(ResponseCode.DELETED, null);
     }
 
-    public static DeleteResponse methodNotAllowed() {
-        return new DeleteResponse(ResponseCode.METHOD_NOT_ALLOWED, null);
+    public static BootstrapDeleteResponse methodNotAllowed(String message) {
+        return new BootstrapDeleteResponse(ResponseCode.METHOD_NOT_ALLOWED, message);
     }
 }

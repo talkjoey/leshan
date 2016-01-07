@@ -15,7 +15,8 @@
  *******************************************************************************/
 package org.eclipse.leshan.client.californium.impl;
 
-import static org.eclipse.leshan.client.californium.impl.ResourceUtil.*;
+import static org.eclipse.leshan.client.californium.impl.ResourceUtil.extractIdentity;
+import static org.eclipse.leshan.client.californium.impl.ResourceUtil.fromLwM2mCode;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -36,7 +37,7 @@ import org.eclipse.leshan.ObserveSpec;
 import org.eclipse.leshan.client.resource.LinkFormattable;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
 import org.eclipse.leshan.client.resource.NotifySender;
-import org.eclipse.leshan.client.servers.RegistrationEngine;
+import org.eclipse.leshan.client.servers.BootstrapHandler;
 import org.eclipse.leshan.client.util.ObserveSpecParser;
 import org.eclipse.leshan.core.model.LwM2mModel;
 import org.eclipse.leshan.core.node.LwM2mNode;
@@ -80,13 +81,13 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
     private static final Logger LOG = LoggerFactory.getLogger(ObjectResource.class);
 
     private final LwM2mObjectEnabler nodeEnabler;
-    private final RegistrationEngine registrationEngine;
+    private final BootstrapHandler bootstrapHandler;
 
-    public ObjectResource(LwM2mObjectEnabler nodeEnabler, RegistrationEngine registrationEngine) {
+    public ObjectResource(LwM2mObjectEnabler nodeEnabler, BootstrapHandler bootstrapHandler) {
         super(Integer.toString(nodeEnabler.getId()));
         this.nodeEnabler = nodeEnabler;
         this.nodeEnabler.setNotifySender(this);
-        this.registrationEngine = registrationEngine;
+        this.bootstrapHandler = bootstrapHandler;
         setObservable(true);
     }
 
@@ -174,9 +175,9 @@ public class ObjectResource extends CoapResource implements LinkFormattable, Not
             try {
                 LwM2mModel model = new LwM2mModel(nodeEnabler.getObjectModel());
                 lwM2mNode = LwM2mNodeDecoder.decode(coapExchange.getRequestPayload(), contentFormat, path, model);
-                if (registrationEngine.bootstrapping()) {
-                    BootstrapWriteResponse response = nodeEnabler.write(identity, new BootstrapWriteRequest(path, lwM2mNode,
-                                    contentFormat));
+                if (bootstrapHandler.bootstrapping()) {
+                    BootstrapWriteResponse response = nodeEnabler.write(identity, new BootstrapWriteRequest(path,
+                            lwM2mNode, contentFormat));
                     coapExchange.respond(fromLwM2mCode(response.getCode()), response.getErrorMessage());
                 } else {
                     WriteResponse response = nodeEnabler.write(identity, new WriteRequest(Mode.REPLACE, contentFormat, URI,
