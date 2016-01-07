@@ -35,18 +35,12 @@ public class RootResource extends CoapResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(RootResource.class);
 
-    private Map<Integer, LwM2mObjectEnabler> enablers;
-    private RegistrationEngine regEngine;
+    private final Map<Integer, LwM2mObjectEnabler> enablers;
+    private final RegistrationEngine regEngine;
 
-    public RootResource() {
+    public RootResource(Map<Integer, LwM2mObjectEnabler> objectEnablers, RegistrationEngine regEngine) {
         super("", false);
-    }
-
-    public void setEnablers(Map<Integer, LwM2mObjectEnabler> objectEnablers) {
         this.enablers = objectEnablers;
-    }
-
-    public void setRegEngine(RegistrationEngine regEngine) {
         this.regEngine = regEngine;
     }
 

@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.eclipse.leshan.ResponseCode;
 import org.eclipse.leshan.client.request.LwM2mClientRequestSender;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
+import org.eclipse.leshan.client.util.LinkFormatHelper;
 import org.eclipse.leshan.core.request.BootstrapRequest;
 import org.eclipse.leshan.core.request.DeregisterRequest;
 import org.eclipse.leshan.core.request.Identity;
@@ -161,8 +162,11 @@ public class RegistrationEngine {
         }
 
         // send register request
-        RegisterResponse response = sender.send(dmInfo.getAddress(), dmInfo.isSecure(), new RegisterRequest(endpoint,
-                dmInfo.lifetime, null, dmInfo.binding, null, null), null);
+        RegisterResponse response = sender.send(
+                dmInfo.getAddress(),
+                dmInfo.isSecure(),
+                new RegisterRequest(endpoint, dmInfo.lifetime, null, dmInfo.binding, null, LinkFormatHelper
+                        .getClientDescription(objectEnablers.values(), null)), null);
         if (response == null) {
             registrationID = null;
             LOG.error("Registration failed: timeout");
@@ -170,7 +174,7 @@ public class RegistrationEngine {
             registrationID = response.getRegistrationID();
 
             // update every lifetime period
-            regUpdateFuture = schedExecutor.schedule(new UpdateRegistration(), dmInfo.lifetime, TimeUnit.SECONDS);
+            regUpdateFuture = schedExecutor.schedule(new UpdateRegistration(), dmInfo.lifetime - 1, TimeUnit.SECONDS);
 
             LOG.info("Registered with location '{}'", response.getRegistrationID());
         } else {
@@ -230,7 +234,7 @@ public class RegistrationEngine {
             bootstrap();
         } else if (response.getCode() == ResponseCode.CHANGED) {
             // Update successful, so we reschedule new update
-            regUpdateFuture = schedExecutor.schedule(new UpdateRegistration(), dmInfo.lifetime, TimeUnit.SECONDS);
+            regUpdateFuture = schedExecutor.schedule(new UpdateRegistration(), dmInfo.lifetime - 1, TimeUnit.SECONDS);
             LOG.info("Registration update: {}", response.getCode());
         } else {
             // Update failed but server is here so start a new registration
@@ -252,5 +256,9 @@ public class RegistrationEngine {
         public void run() {
             update();
         }
+    }
+
+    public void stop() {
+        deregister();
     }
 }

@@ -18,8 +18,6 @@ package org.eclipse.leshan.client.californium;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import org.eclipse.californium.core.CoapServer;
-import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.leshan.client.object.Device;
 import org.eclipse.leshan.client.object.Security;
 import org.eclipse.leshan.client.object.Server;
@@ -36,7 +34,6 @@ public class LeshanClientBuilder {
     private String endpoint;
     private InetSocketAddress localAddress;
     private InetSocketAddress localSecureAddress;
-    private CoapServer localServer;
     private List<LwM2mObjectEnabler> objectEnablers;
 
     public LeshanClientBuilder setEndpoint(String endpoint) {
@@ -61,14 +58,6 @@ public class LeshanClientBuilder {
     }
 
     /**
-     * Sets the client-side CoAP server.
-     */
-    public LeshanClientBuilder setlocalServer(CoapServer localServer) {
-        this.localServer = localServer;
-        return this;
-    }
-
-    /**
      * Sets the list of objects enablers
      */
     public LeshanClientBuilder setObjects(List<LwM2mObjectEnabler> objectEnablers) {
@@ -87,14 +76,6 @@ public class LeshanClientBuilder {
         if (localSecureAddress == null) {
             localSecureAddress = new InetSocketAddress(0);
         }
-        if (localServer == null) {
-            localServer = new CoapServer() {
-                @Override
-                protected Resource createRoot() {
-                    return new org.eclipse.leshan.client.californium.impl.RootResource();
-                }
-            };
-        }
         if (objectEnablers == null) {
             ObjectsInitializer initializer = new ObjectsInitializer();
             initializer.setInstancesForObject(LwM2mId.SECURITY_ID,
@@ -104,6 +85,6 @@ public class LeshanClientBuilder {
                     .setInstancesForObject(LwM2mId.DEVICE_ID, new Device("Eclipse Leshan", "TEST-123", "12345", "U"));
             objectEnablers = initializer.createMandatory();
         }
-        return new LeshanClient(endpoint, localAddress, localSecureAddress, objectEnablers, localServer);
+        return new LeshanClient(endpoint, localAddress, localSecureAddress, objectEnablers);
     }
 }

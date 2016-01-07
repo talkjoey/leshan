@@ -43,7 +43,6 @@ import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
-import org.eclipse.californium.scandium.dtls.pskstore.StaticPskStore;
 import org.eclipse.leshan.client.californium.LeshanClientBuilder;
 import org.eclipse.leshan.client.object.Device;
 import org.eclipse.leshan.client.object.Security;
@@ -167,21 +166,14 @@ public class SecureIntegrationTestHelper extends IntegrationTestHelper {
         objects.add(initializer.create(2));
 
         InetSocketAddress clientAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
-        DtlsConnectorConfig.Builder config = new DtlsConnectorConfig.Builder(clientAddress);
-        // TODO we should read the config from the security object
-        config.setPskStore(new StaticPskStore(pskIdentity, pskKey));
-
-        CoapServer coapServer = new CoapServer();
-        coapServer.addEndpoint(new CoapEndpoint(new DTLSConnector(config.build()), NetworkConfig.getStandard()));
-
         LeshanClientBuilder builder = new LeshanClientBuilder();
         builder.setEndpoint(ENDPOINT_IDENTIFIER);
         builder.setLocalAddress(clientAddress.getHostString(), clientAddress.getPort());
         builder.setObjects(objects);
-        builder.setlocalServer(coapServer);
         client = builder.build();
     }
 
+    // TODO implement RPK support for client
     public void createRPKClient() {
         ObjectsInitializer initializer = new ObjectsInitializer();
         initializer.setInstancesForObject(
@@ -207,10 +199,10 @@ public class SecureIntegrationTestHelper extends IntegrationTestHelper {
         builder.setEndpoint(ENDPOINT_IDENTIFIER);
         builder.setLocalAddress(clientAddress.getHostString(), clientAddress.getPort());
         builder.setObjects(objects);
-        builder.setlocalServer(coapServer);
         client = builder.build();
     }
 
+    // TODO implement X509 support for client
     public void createX509CertClient(PrivateKey privatekey, Certificate[] trustedCertificates) {
         ObjectsInitializer initializer = new ObjectsInitializer();
         // TODO security instance with certificate info
@@ -236,7 +228,6 @@ public class SecureIntegrationTestHelper extends IntegrationTestHelper {
         builder.setEndpoint(ENDPOINT_IDENTIFIER);
         builder.setLocalAddress(clientAddress.getHostString(), clientAddress.getPort());
         builder.setObjects(objects);
-        builder.setlocalServer(coapServer);
         client = builder.build();
     }
 

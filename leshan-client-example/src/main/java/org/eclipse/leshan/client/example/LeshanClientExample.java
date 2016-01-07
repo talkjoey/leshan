@@ -81,7 +81,7 @@ public class LeshanClientExample {
         // Initialize object list
         ObjectsInitializer initializer = new ObjectsInitializer();
         initializer.setInstancesForObject(LwM2mId.SECURITY_ID,
-                Security.noSecBootstap("coap://" + serverHostName + ":" + serverPort, 123));
+                Security.noSec("coap://" + serverHostName + ":" + serverPort, 123));
         initializer.setInstancesForObject(LwM2mId.SERVER_ID, new Server(123, 30, BindingMode.U, false));
         initializer.setClassForObject(3, MyDevice.class);
         initializer.setInstancesForObject(6, locationInstance);
@@ -97,7 +97,6 @@ public class LeshanClientExample {
 
         // Start the client
         client.start();
-        client.bootstrap();
 
         // Change the location through the Console
         Scanner scanner = new Scanner(System.in);

@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Collections;
@@ -70,7 +71,7 @@ public class BootstrapStoreImpl implements BootstrapStore {
         ConfigurationChecker.verify(config);
         // check the configuration
         bootstrapByEndpoint.put(endpoint, config);
-        //
+
         // TODO save to JSON format
         // saveToFile();
     }
@@ -89,20 +90,9 @@ public class BootstrapStoreImpl implements BootstrapStore {
 
     @SuppressWarnings("unchecked")
     private void loadFromFile() {
-
         try {
             File file = new File(filename);
-
-            if (!file.exists()) {
-                // create parents if needed
-                File parent = file.getParentFile();
-                if (parent != null) {
-                    parent.mkdirs();
-                }
-                file.createNewFile();
-
-            } else {
-
+            if (file.exists()) {
                 try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
                     bootstrapByEndpoint.putAll((Map<String, BootstrapConfig>) in.readObject());
                 }
@@ -115,6 +105,23 @@ public class BootstrapStoreImpl implements BootstrapStore {
     }
 
     private void saveToFile() {
+        // Create file if it does not exist
+        File file = new File(filename);
+        if (!file.exists()) {
+            // create parents if needed
+            File parent = file.getParentFile();
+            if (parent != null) {
+                parent.mkdirs();
+            }
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                LOG.warn(String.format("Unable to create %s file to persist bootstrap configuration", filename), e);
+                return;
+            }
+        }
+
+        // Save to file
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(filename))) {
             Map<String, BootstrapConfig> copy = new HashMap<>(bootstrapByEndpoint);
             out.writeObject(copy);

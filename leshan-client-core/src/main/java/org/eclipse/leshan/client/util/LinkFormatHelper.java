@@ -16,6 +16,7 @@
 package org.eclipse.leshan.client.util;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,7 +38,7 @@ public final class LinkFormatHelper {
     private LinkFormatHelper() {
     }
 
-    public static LinkObject[] getClientDescription(final List<LwM2mObjectEnabler> objectEnablers,
+    public static LinkObject[] getClientDescription(final Collection<LwM2mObjectEnabler> objectEnablers,
             final String rootPath) {
         List<LinkObject> linkObjects = new ArrayList<>();
 

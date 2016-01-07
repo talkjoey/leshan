@@ -19,6 +19,8 @@ package org.eclipse.leshan.integration.tests;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.leshan.client.LwM2mClient;
 import org.eclipse.leshan.client.californium.LeshanClientBuilder;
@@ -32,6 +34,7 @@ import org.eclipse.leshan.core.request.BindingMode;
 import org.eclipse.leshan.server.californium.LeshanServerBuilder;
 import org.eclipse.leshan.server.californium.impl.LeshanServer;
 import org.eclipse.leshan.server.client.Client;
+import org.eclipse.leshan.server.client.ClientRegistryListener;
 import org.eclipse.leshan.server.impl.SecurityRegistryImpl;
 
 /**
@@ -42,21 +45,27 @@ public class IntegrationTestHelper {
 
     static final String ENDPOINT_IDENTIFIER = "kdfflwmtm";
     static final String MODEL_NUMBER = "IT-TEST-123";
+    public static final long LIFETIME = 2;
 
     LeshanServer server;
     LwM2mClient client;
+    private CountDownLatch registerLatch;
+    private CountDownLatch deregisterLatch;
+    private CountDownLatch updateLatch;
 
     public void createClient() {
+        // Create objects Enabler
         ObjectsInitializer initializer = new ObjectsInitializer();
         initializer.setInstancesForObject(
                 LwM2mId.SECURITY_ID,
                 Security.noSec("coap://" + server.getNonSecureAddress().getHostString() + ":"
                         + server.getNonSecureAddress().getPort(), 12345));
-        initializer.setInstancesForObject(LwM2mId.SERVER_ID, new Server(12345, 30, BindingMode.U, false));
+        initializer.setInstancesForObject(LwM2mId.SERVER_ID, new Server(12345, LIFETIME, BindingMode.U, false));
         initializer.setInstancesForObject(LwM2mId.DEVICE_ID, new Device("Eclipse Leshan", MODEL_NUMBER, "12345", "U"));
         List<LwM2mObjectEnabler> objects = initializer.createMandatory();
         objects.add(initializer.create(2));
 
+        // Build Client
         LeshanClientBuilder builder = new LeshanClientBuilder();
         builder.setEndpoint(ENDPOINT_IDENTIFIER);
         builder.setObjects(objects);
@@ -82,9 +91,60 @@ public class IntegrationTestHelper {
             }
         });
         server = builder.build();
+
+        // monitor client registration
+        registerLatch = new CountDownLatch(1);
+        deregisterLatch = new CountDownLatch(1);
+        updateLatch = new CountDownLatch(1);
+        server.getClientRegistry().addListener(new ClientRegistryListener() {
+            @Override
+            public void updated(Client clientUpdated) {
+                if (clientUpdated.getEndpoint().equals(ENDPOINT_IDENTIFIER)) {
+                    updateLatch.countDown();
+                }
+            }
+
+            @Override
+            public void unregistered(Client client) {
+                if (client.getEndpoint().equals(ENDPOINT_IDENTIFIER)) {
+                    deregisterLatch.countDown();
+                }
+            }
+
+            @Override
+            public void registered(Client client) {
+                if (client.getEndpoint().equals(ENDPOINT_IDENTIFIER)) {
+                    registerLatch.countDown();
+                }
+            }
+        });
     }
 
-    Client getClient() {
+    public boolean waitForRegistration(long timeInSeconds) {
+        try {
+            return registerLatch.await(timeInSeconds, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public boolean waitForUpdate(long timeInSeconds) {
+        try {
+            return updateLatch.await(timeInSeconds, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public boolean waitForDeregistration(long timeInSeconds) {
+        try {
+            return deregisterLatch.await(timeInSeconds, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Client getClient() {
         return server.getClientRegistry().get(ENDPOINT_IDENTIFIER);
     }
 }
